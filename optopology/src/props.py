@@ -1,15 +1,17 @@
-app_port = 5017
-# db_server = 'tcp:HOAGSQLLSN74,5433'
-# db_port = '5433'
-# db_name = 'IT_Operations_Plattform'
-# db_user = 'SV_ ITOperPlat_Login'
-# db_pwd = 'UUhGcTMzSnRjVjQ9UVZFek9TRnpkM0U9'
+import os
 
-# SQL Server configuration (matching docker-compose.yml)
-db_server = 'mysql,1433'  # Service name 'mysql' but it's actually SQL Server, port 1433 inside container
-db_port = '1433'
-db_name = 'tempdb'  # Use tempdb which is always available in SQL Server
-db_user = 'sa'
-db_pwd = 'AQ39!swq'
+app_port = 5017
+
+# MongoDB configuration (can be overridden by environment variables)
+mongo_host = os.environ.get('MONGO_HOST', 'localhost')
+mongo_port = int(os.environ.get('MONGO_PORT', 27017))
+mongo_user = os.environ.get('MONGO_USER', 'admin')
+mongo_password = os.environ.get('MONGO_PASSWORD', 'topology_pass')
+mongo_db = os.environ.get('MONGO_DB', 'optopology')
+
+# Collections
+topology_dashboard_collection = 'network_topology_dashboard'
+topology_block_collection = 'network_topology_block'
+
 num_of_threads = 300
-ssh_timeout=60
+ssh_timeout = 60
