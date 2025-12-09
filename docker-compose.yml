@@ -24,7 +24,10 @@ services:
       start_period: 30s
 
   optopology:
-    image: cisco/python_custom:v1.0
+    build:
+      context: ./optopology
+      dockerfile: Dockerfile
+    image: optopology:local
     container_name: optopology
     depends_on:
       mongodb:
