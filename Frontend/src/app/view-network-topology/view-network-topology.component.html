@@ -1,4 +1,6 @@
-<!-- Always show the import controls -->
+<!-- Modern Network Topology UI - Enhanced Design -->
+
+<!-- Top Navigation Bar -->
 <div class="import-controls">
   <img
     src="assets/alrajhilogo.png"
@@ -7,36 +9,47 @@
     style="margin-left: 25px"
   />
   <div class="import-controls-inner">
+    <!-- Auto-refresh Status -->
     <div
       class="auto-refresh-info"
-      style="
-        margin-left: 15px;
-        color: #27ae60;
-        font-size: 12px;
-        display: flex;
-        align-items: center;
-      "
+      [class.active]="isAutoRefreshActive()"
+      style="margin-left: 15px; color: #10b981"
     >
-      <span *ngIf="isAutoRefreshActive()" class="auto-refresh-icon">🔄</span>
-      <span *ngIf="!isAutoRefreshActive()" class="auto-refresh-icon">⏸️</span>
-      Auto-refresh in {{ getFormattedCountdown() }}
+      <span *ngIf="isAutoRefreshActive()" class="auto-refresh-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+        </svg>
+      </span>
+      <span *ngIf="!isAutoRefreshActive()" class="auto-refresh-icon" style="animation: none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+        </svg>
+      </span>
+      <span style="font-family: 'JetBrains Mono', monospace;">{{ getFormattedCountdown() }}</span>
     </div>
+
+    <!-- Auto-refresh Toggle Button -->
     <button
-      style="padding: 6px 15px; margin-left: 10px"
+      style="padding: 6px 18px; margin-left: 10px"
       nbButton
-      status="success"
+      [status]="isAutoRefreshActive() ? 'warning' : 'success'"
       shape="round"
       size="small"
       (click)="toggleAutoRefresh()"
-      [title]="
-        isAutoRefreshActive() ? 'Stop Auto-refresh' : 'Start Auto-refresh'
-      "
-      [style.background-color]="isAutoRefreshActive() ? '#f39c12' : '#27ae60'"
+      [title]="isAutoRefreshActive() ? 'Stop Auto-refresh' : 'Start Auto-refresh'"
     >
-      {{ isAutoRefreshActive() ? "⏸️ Stop" : "▶️ Start" }} Auto-refresh
+      <svg *ngIf="isAutoRefreshActive()" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 6px;">
+        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+      </svg>
+      <svg *ngIf="!isAutoRefreshActive()" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 6px;">
+        <path d="M8 5v14l11-7z"/>
+      </svg>
+      {{ isAutoRefreshActive() ? "Stop" : "Start" }}
     </button>
 
+    <!-- Top Controls Group -->
     <div class="top-controls">
+      <!-- Legend Toggle (visible when not fullscreen) -->
       <div *ngIf="!isFullscreen" class="legend-toggle">
         <button
           class="legend-toggle-btn"
@@ -44,15 +57,15 @@
           [title]="showLegend ? 'Hide Legend' : 'Show Legend'"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-            />
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
           </svg>
           <span>{{ showLegend ? "Hide" : "Show" }} Legend</span>
         </button>
       </div>
+
+      <!-- Fullscreen Toggle -->
       <button
-        style="padding: 6px 25px"
+        style="padding: 6px 20px"
         nbButton
         status="primary"
         shape="round"
@@ -60,37 +73,53 @@
         (click)="toggleFullscreen()"
         [title]="isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'"
       >
-        Full Screen
+        <svg *ngIf="!isFullscreen" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 6px;">
+          <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+        </svg>
+        <svg *ngIf="isFullscreen" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 6px;">
+          <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
+        </svg>
+        {{ isFullscreen ? "Exit" : "Full Screen" }}
       </button>
+
+      <!-- Refresh Data -->
       <button
-        style="padding: 6px 25px"
+        style="padding: 6px 20px"
         nbButton
         status="primary"
         shape="round"
         size="small"
         (click)="refreshFromBackend()"
+        title="Refresh topology data"
       >
-        🔄 Refresh Data
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 6px;">
+          <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+        </svg>
+        Refresh
       </button>
     </div>
 
+    <!-- Edit Topology Button (conditional) -->
     <button
       *ngIf="permission"
-      style="padding: 6px 25px"
+      style="padding: 6px 20px"
       nbButton
       status="primary"
       shape="round"
       size="small"
       (click)="goToTopology()"
-      title="Go back to main topology"
+      title="Go to edit topology"
     >
-      <i class="fa-solid fa-arrow-left"></i>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 6px;">
+        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+      </svg>
       Edit Topology
     </button>
 
+    <!-- Topology Data Button (conditional) -->
     <button
       *ngIf="permission"
-      style="padding: 6px 25px"
+      style="padding: 6px 20px"
       nbButton
       status="primary"
       shape="round"
@@ -98,87 +127,73 @@
       (click)="goToTopologyData()"
       title="Go to topology data management"
     >
-      <i class="fa-solid fa-arrow-left"></i>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 6px;">
+        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+      </svg>
       Topology Data
     </button>
-
-    <!-- <input
-      type="file"
-      (change)="onFileSelect($event)"
-      accept=".xlsx, .xls"
-      hidden
-      #fileInput
-    /> -->
-    <!-- <button
-      *ngIf="this.fileData.length == 0 && !hasLocalStorageData()"
-      nbButton
-      style="padding: 6px 25px"
-      status="primary"
-      shape="round"
-      size="small"
-      (click)="fileInput.click()"
-    >
-      Import Excel
-    </button> -->
-    <!-- <button
-      *ngIf="hasLocalStorageData()"
-      nbButton
-      style="padding: 6px 25px"
-      status="danger"
-      shape="round"
-      size="small"
-      (click)="clearData()"
-    >
-      Clear Data
-    </button> -->
   </div>
 </div>
 
-<!-- Topology container is always present so Cytoscape can initialize -->
+<!-- Main Topology Container -->
 <div class="topology-container">
-  <!-- Main topology area -->
+  <!-- Main Topology Canvas Area -->
   <div class="topology-main" [class.fullscreen-mode]="isFullscreen">
     <div #cy id="cy"></div>
   </div>
 
-  <!-- Legend toggle button - only visible when NOT in fullscreen -->
-
-  <!-- Legend panel - only visible when NOT in fullscreen and toggled on -->
+  <!-- Legend Panel (visible when not in fullscreen and toggled on) -->
   <div *ngIf="!isFullscreen && showLegend" class="legend-panel">
     <div class="legend-content">
+      <!-- Legend Header -->
       <div class="legend-header">
-        <h3>Network Legend</h3>
+        <h3>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 8px; color: #60a5fa;">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          </svg>
+          Network Legend
+        </h3>
         <button
           class="legend-close-btn"
           (click)="toggleLegend()"
           title="Close Legend"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-            />
+            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
           </svg>
         </button>
       </div>
 
-      <!-- Healths -->
+      <!-- Network Health Section -->
       <div class="legend-section">
-        <h4>Network Health</h4>
+        <h4>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+          Network Health
+        </h4>
         <div class="legend-items">
           <div class="legend-item">
+            <div class="status-indicator status-indicator--online"></div>
             <span>Up Devices</span>
-            <span>{{ getDeviceStatusCount("on") }}</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #10b981;">{{ getDeviceStatusCount("on") }}</span>
           </div>
           <div class="legend-item">
+            <div class="status-indicator status-indicator--offline"></div>
             <span>Down Devices</span>
-            <span>{{ getDeviceStatusCount("off") }}</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #ef4444;">{{ getDeviceStatusCount("off") }}</span>
           </div>
         </div>
       </div>
 
-      <!-- Device Types -->
+      <!-- Device Types Section -->
       <div class="legend-section">
-        <h4>Device Types</h4>
+        <h4>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;">
+            <path d="M4 6h18V4H4c-1.1 0-2 .9-2 2v11H0v3h14v-3H4V6zm19 2h-6c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h6c.55 0 1-.45 1-1V9c0-.55-.45-1-1-1zm-1 9h-4v-7h4v7z"/>
+          </svg>
+          Device Types
+        </h4>
         <div class="legend-items">
           <div class="legend-item">
             <img src="assets/firewall_new.svg" alt="Firewall" />
@@ -215,9 +230,14 @@
         </div>
       </div>
 
-      <!-- Network Blocks -->
+      <!-- Network Blocks Section -->
       <div class="legend-section">
-        <h4>Network Blocks</h4>
+        <h4>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
+          </svg>
+          Network Blocks
+        </h4>
         <div class="legend-items">
           <div class="legend-item">
             <div class="legend-box legend-box--internet"></div>
@@ -254,47 +274,57 @@
         </div>
       </div>
 
-      <!-- Connection Status -->
+      <!-- Connection Status Section -->
       <div class="legend-section">
-        <h4>Connection Status</h4>
+        <h4>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;">
+            <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+          </svg>
+          Connection Status
+        </h4>
         <div class="legend-items">
           <div class="legend-item">
             <div class="legend-line legend-line--critical"></div>
-            <span>≥90% or 0% (Critical)</span>
+            <span>Critical (≥90% or 0%)</span>
           </div>
           <div class="legend-item">
             <div class="legend-line legend-line--warning"></div>
-            <span>≥70% (Warning)</span>
+            <span>Warning (≥70%)</span>
           </div>
           <div class="legend-item">
             <div class="legend-line legend-line--normal"></div>
-            <span>≥50% (Medium)</span>
+            <span>Medium (≥50%)</span>
           </div>
           <div class="legend-item">
             <div class="legend-line legend-line--good"></div>
-            <span>≤50% (Good)</span>
+            <span>Good (≤50%)</span>
           </div>
         </div>
       </div>
 
-      <!-- Device Status -->
+      <!-- Device Status Section -->
       <div class="legend-section">
-        <h4>Device Status</h4>
+        <h4>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+          Device Status
+        </h4>
         <div class="legend-items">
           <div class="legend-item">
             <div class="status-indicator status-indicator--online"></div>
-            <span>&nbsp;&nbsp;&nbsp;&nbsp;Online</span>
+            <span>Online</span>
           </div>
           <div class="legend-item">
             <div class="status-indicator status-indicator--offline"></div>
-            <span>&nbsp;&nbsp;&nbsp;&nbsp;Offline</span>
+            <span>Offline</span>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Legend icon - only visible in fullscreen -->
+  <!-- Legend Icon (visible only in fullscreen) -->
   <div
     *ngIf="isFullscreen"
     class="legend-icon"
@@ -303,13 +333,11 @@
     title="Network Legend"
   >
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-      <path
-        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-      />
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
     </svg>
   </div>
 
-  <!-- Legend tooltip for fullscreen mode -->
+  <!-- Legend Tooltip (fullscreen mode) -->
   <div
     *ngIf="isFullscreen && showTooltip"
     class="legend-tooltip"
@@ -399,19 +427,19 @@
         <div class="tooltip-items">
           <div class="tooltip-item">
             <div class="tooltip-line tooltip-line--critical"></div>
-            <span>≥90% or 0% (Critical)</span>
+            <span>Critical (≥90% or 0%)</span>
           </div>
           <div class="tooltip-item">
             <div class="tooltip-line tooltip-line--warning"></div>
-            <span>≥70% (Warning)</span>
+            <span>Warning (≥70%)</span>
           </div>
           <div class="tooltip-item">
             <div class="tooltip-line tooltip-line--normal"></div>
-            <span>≥50% (Medium)</span>
+            <span>Medium (≥50%)</span>
           </div>
           <div class="tooltip-item">
             <div class="tooltip-line tooltip-line--good"></div>
-            <span>≤50% (Good)</span>
+            <span>Good (≤50%)</span>
           </div>
         </div>
       </div>
@@ -433,120 +461,103 @@
     </div>
   </div>
 
-  <!-- UP Devices Count - only visible in fullscreen -->
+  <!-- Fullscreen UP Devices Indicator -->
   <div *ngIf="isFullscreen && shouldShowUI" class="fullscreen-up-devices">
     <div class="fullscreen-indicator-icon">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-        <path
-          d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-        />
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
       </svg>
     </div>
     <div class="fullscreen-indicator-content">
-      <div class="fullscreen-indicator-number">
-        {{ getDeviceStatusCount("on") }}
-      </div>
+      <div class="fullscreen-indicator-number">{{ getDeviceStatusCount("on") }}</div>
       <div class="fullscreen-indicator-label">UP Devices</div>
     </div>
   </div>
 
-  <!-- DOWN Devices Count - only visible in fullscreen -->
+  <!-- Fullscreen DOWN Devices Indicator -->
   <div *ngIf="isFullscreen && shouldShowUI" class="fullscreen-down-devices">
     <div class="fullscreen-indicator-icon">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-        <path
-          d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-        />
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
       </svg>
     </div>
     <div class="fullscreen-indicator-content">
-      <div class="fullscreen-indicator-number">
-        {{ getDeviceStatusCount("off") }}
-      </div>
+      <div class="fullscreen-indicator-number">{{ getDeviceStatusCount("off") }}</div>
       <div class="fullscreen-indicator-label">DOWN Devices</div>
     </div>
   </div>
 
-  <!-- Speed Status Critical Count - only visible in fullscreen -->
+  <!-- Fullscreen Speed Status: Critical -->
   <div *ngIf="isFullscreen && shouldShowUI" class="fullscreen-speed-critical">
     <div class="fullscreen-indicator-icon">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-        <path
-          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
-        />
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
       </svg>
     </div>
     <div class="fullscreen-indicator-content">
-      <div class="fullscreen-indicator-number">
-        {{ getSpeedStatusCounts().critical }}
-      </div>
+      <div class="fullscreen-indicator-number">{{ getSpeedStatusCounts().critical }}</div>
       <div class="fullscreen-indicator-label">Critical</div>
     </div>
   </div>
 
-  <!-- Speed Status Warning Count - only visible in fullscreen -->
+  <!-- Fullscreen Speed Status: Warning -->
   <div *ngIf="isFullscreen && shouldShowUI" class="fullscreen-speed-warning">
     <div class="fullscreen-indicator-icon">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
       </svg>
     </div>
     <div class="fullscreen-indicator-content">
-      <div class="fullscreen-indicator-number">
-        {{ getSpeedStatusCounts().warning }}
-      </div>
+      <div class="fullscreen-indicator-number">{{ getSpeedStatusCounts().warning }}</div>
       <div class="fullscreen-indicator-label">Warning</div>
     </div>
   </div>
 
-  <!-- Speed Status Normal Count - only visible in fullscreen -->
+  <!-- Fullscreen Speed Status: Normal -->
   <div *ngIf="isFullscreen && shouldShowUI" class="fullscreen-speed-normal">
     <div class="fullscreen-indicator-icon">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-        <path
-          d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-        />
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-4h2v2h-2zm0-2h2V7h-2z"/>
       </svg>
     </div>
     <div class="fullscreen-indicator-content">
-      <div class="fullscreen-indicator-number">
-        {{ getSpeedStatusCounts().normal }}
-      </div>
-      <div class="fullscreen-indicator-label">Normal</div>
+      <div class="fullscreen-indicator-number">{{ getSpeedStatusCounts().normal }}</div>
+      <div class="fullscreen-indicator-label">Medium</div>
     </div>
   </div>
 
-  <!-- Speed Status Good Count - only visible in fullscreen -->
+  <!-- Fullscreen Speed Status: Good -->
   <div *ngIf="isFullscreen && shouldShowUI" class="fullscreen-speed-good">
     <div class="fullscreen-indicator-icon">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
       </svg>
     </div>
     <div class="fullscreen-indicator-content">
-      <div class="fullscreen-indicator-number">
-        {{ getSpeedStatusCounts().good }}
-      </div>
+      <div class="fullscreen-indicator-number">{{ getSpeedStatusCounts().good }}</div>
       <div class="fullscreen-indicator-label">Good</div>
     </div>
   </div>
 
   <!-- Last Updated Timestamp -->
   <div class="last-updated-timestamp">
-    <span class="timestamp-label">Last Updated at:</span>
+    <span class="timestamp-label">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;">
+        <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+      </svg>
+      Last Updated:
+    </span>
     <span class="timestamp-value">{{ lastUpdatedTime }}</span>
   </div>
 
-  <!-- Recenter button -->
+  <!-- Recenter View Button -->
   <button class="recenter-btn" (click)="recenterView()" title="Recenter View">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-      <path
-        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
-      />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
     </svg>
   </button>
 
-  <!-- Fullscreen button -->
+  <!-- Fullscreen Toggle Button -->
   <button
     class="fullscreen-btn"
     (click)="toggleFullscreen()"
@@ -554,75 +565,51 @@
   >
     <svg
       *ngIf="!isFullscreen"
-      width="24"
-      height="24"
+      width="22"
+      height="22"
       viewBox="0 0 24 24"
       fill="currentColor"
     >
-      <path
-        d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"
-      />
+      <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
     </svg>
     <svg
       *ngIf="isFullscreen"
-      width="24"
-      height="24"
+      width="22"
+      height="22"
       viewBox="0 0 24 24"
       fill="currentColor"
     >
-      <path
-        d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"
-      />
+      <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
     </svg>
   </button>
 </div>
 
-<!-- Loading overlay shown while requests are in-flight -->
+<!-- Loading Overlay -->
 <div *ngIf="isLoadingData" class="no-data-overlay">
   <div class="no-data-content">
     <div class="no-data-icon">
-      <svg
-        width="64"
-        height="64"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        opacity="0.7"
-      >
-        <path
-          d="M12 22c5.52 0 10-4.48 10-10h-2a8 8 0 1 1-8-8V2C6.48 2 2 6.48 2 12s4.48 10 10 10z"
-        />
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z"/>
       </svg>
     </div>
-    <h2 class="no-data-title">Loading...</h2>
+    <h2 class="no-data-title">Loading Topology...</h2>
     <p class="no-data-description">
-      Fetching latest topology data from backend.
+      Fetching the latest network topology data from the backend.
     </p>
   </div>
 </div>
 
-<!-- Show a centered message when there's no data (only if last load failed) -->
-<div
-  *ngIf="!isLoadingData && !shouldShowUI && loadFailed"
-  class="no-data-overlay"
->
+<!-- No Data Overlay (shown when load failed) -->
+<div *ngIf="!isLoadingData && !shouldShowUI && loadFailed" class="no-data-overlay">
   <div class="no-data-content">
-    <div class="no-data-icon">
-      <svg
-        width="64"
-        height="64"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        opacity="0.5"
-      >
-        <path
-          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
-        />
+    <div class="no-data-icon" style="animation: none;">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" style="animation: none; opacity: 0.5;">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
       </svg>
     </div>
     <h2 class="no-data-title">No Data Found</h2>
     <p class="no-data-description">
-      No network topology data is available. Please refresh to load data from
-      the backend.
+      No network topology data is available. Please refresh to load data from the backend.
     </p>
     <div class="no-data-actions">
       <button
@@ -633,7 +620,10 @@
         (click)="refreshFromBackend()"
         class="no-data-btn no-data-btn-primary"
       >
-        🔄 Refresh Data
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px;">
+          <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+        </svg>
+        Refresh Data
       </button>
     </div>
   </div>

@@ -521,108 +521,115 @@ export class ViewNetworkTopologyComponent implements AfterViewInit, OnDestroy {
     return elements;
   }
 
-  // Predefined block styles mapping
+  // Predefined block styles mapping - Modern color scheme
   private blockStylesMap: { [key: string]: any } = {
     'internet-block': {
       margin: '0px',
-      'background-color': '#c6e3ff',
-      'background-opacity': 0.25,
-      'border-color': '#1E90FF',
+      'background-color': '#3b82f6',
+      'background-opacity': 0.12,
+      'border-color': '#60a5fa',
       'border-width': 2,
-      'border-opacity': 0.8,
+      'border-opacity': 0.6,
+      'corner-radius': 20,
       padding: '120px',
     },
     'wan-block': {
       margin: '0px',
-      'background-color': '#f9c1cc',
-      'background-opacity': 0.25,
-      'border-color': '#DC143C',
+      'background-color': '#ef4444',
+      'background-opacity': 0.12,
+      'border-color': '#f87171',
       'border-width': 2,
-      'border-opacity': 0.8,
+      'border-opacity': 0.6,
+      'corner-radius': 20,
       padding: '120px',
     },
     'datacenter-block': {
       margin: '0px',
-      'background-color': '#e5ffe5',
-      'background-opacity': 0.25,
-      'border-color': '#006400',
+      'background-color': '#10b981',
+      'background-opacity': 0.12,
+      'border-color': '#34d399',
       'border-width': 2,
-      'border-opacity': 0.8,
+      'border-opacity': 0.6,
+      'corner-radius': 20,
       padding: '120px',
     },
     'replication-block': {
       margin: '0px',
-      'background-color': '#ffe7ff',
-      'background-opacity': 0.25,
-      'border-color': '#800080',
+      'background-color': '#8b5cf6',
+      'background-opacity': 0.12,
+      'border-color': '#a78bfa',
       'border-width': 2,
-      'border-opacity': 0.8,
+      'border-opacity': 0.6,
+      'corner-radius': 20,
       padding: '120px',
     },
     'oob-block': {
       margin: '0px',
-      'background-color': '#c3e3e5',
-      'background-opacity': 0.25,
-      'border-color': '#008080',
+      'background-color': '#14b8a6',
+      'background-opacity': 0.12,
+      'border-color': '#2dd4bf',
       'border-width': 2,
-      'border-opacity': 0.8,
+      'border-opacity': 0.6,
+      'corner-radius': 20,
       padding: '120px',
     },
     'core-block': {
-      'background-color': '#d3d3d3',
-      'background-opacity': 0.15,
-      'border-width': 1,
-      'border-opacity': 0.3,
+      'background-color': '#64748b',
+      'background-opacity': 0.1,
+      'border-color': '#94a3b8',
+      'border-width': 2,
+      'border-opacity': 0.4,
+      'corner-radius': 20,
       margin: '0px',
       padding: '120px',
     },
     'external-block': {
-      'background-color': '#ffe2bf',
-      'background-opacity': 0.15,
-      'border-color': '#FF8C00',
+      'background-color': '#f97316',
+      'background-opacity': 0.12,
+      'border-color': '#fb923c',
       'border-width': 2,
-      'border-opacity': 0.8,
-      'corner-radius': 16,
+      'border-opacity': 0.6,
+      'corner-radius': 20,
       margin: '0px',
       padding: '120px',
     },
     'extranet-block': {
-      'background-color': '#fff0f0',
-      'background-opacity': 0.15,
-      'border-color': '#e67e22',
+      'background-color': '#f59e0b',
+      'background-opacity': 0.12,
+      'border-color': '#fbbf24',
       'border-width': 2,
-      'border-opacity': 0.8,
-      'corner-radius': 16,
+      'border-opacity': 0.6,
+      'corner-radius': 20,
       margin: '0px',
       padding: '120px',
     },
     'visibility-block': {
-      'background-color': '#eaf7ff',
-      'background-opacity': 0.15,
-      'border-color': '#2980b9',
+      'background-color': '#06b6d4',
+      'background-opacity': 0.12,
+      'border-color': '#22d3ee',
       'border-width': 2,
-      'border-opacity': 0.8,
-      'corner-radius': 16,
+      'border-opacity': 0.6,
+      'corner-radius': 20,
       margin: '0px',
       padding: '120px',
     },
     'dmz-block': {
-      'background-color': '#fff5e6',
-      'background-opacity': 0.15,
-      'border-color': '#c0392b',
+      'background-color': '#dc2626',
+      'background-opacity': 0.12,
+      'border-color': '#f87171',
       'border-width': 2,
-      'border-opacity': 0.8,
-      'corner-radius': 16,
+      'border-opacity': 0.6,
+      'corner-radius': 20,
       margin: '0px',
       padding: '120px',
     },
     'ips-block': {
-      'background-color': '#ffe0e0',
-      'background-opacity': 0.15,
-      'border-color': '#e74c3c',
+      'background-color': '#ec4899',
+      'background-opacity': 0.12,
+      'border-color': '#f472b6',
       'border-width': 2,
-      'border-opacity': 0.8,
-      'corner-radius': 16,
+      'border-opacity': 0.6,
+      'corner-radius': 20,
       margin: '0px',
       padding: '120px',
     },
@@ -904,91 +911,119 @@ export class ViewNetworkTopologyComponent implements AfterViewInit, OnDestroy {
 
   private getEdgeStyles(): any[] {
     return [
+      // Base edge style with modern appearance
       {
         selector: 'edge',
         style: {
           'curve-style': 'bezier',
           label: '',
-          width: 2,
-          'line-color': '#4caf50',
+          width: 2.5,
+          'line-color': '#10b981',
+          'line-cap': 'round',
+          'target-arrow-shape': 'none',
+          'opacity': 0.85,
+          'transition-property': 'line-color, width, opacity',
+          'transition-duration': '0.25s',
         },
       },
+      // Dynamic color based on speed data
       {
         selector: 'edge[speedColor]',
         style: {
           'line-color': 'data(speedColor)',
-          width: 2,
+          width: 2.5,
         },
       },
+      // Down status - red with glow effect
       {
         selector: 'edge[speedStatus = "down"]',
         style: {
-          'line-color': '#ff0000',
+          'line-color': '#ef4444',
           'line-style': 'solid',
-          width: 3,
+          width: 4,
+          'opacity': 1,
         },
       },
+      // Critical status - orange-red
       {
         selector: 'edge[speedStatus = "critical"]',
         style: {
-          'line-color': '#ff9500',
+          'line-color': '#f97316',
           'line-style': 'solid',
-          width: 3,
+          width: 3.5,
+          'opacity': 0.95,
         },
       },
+      // Warning status - amber
       {
         selector: 'edge[speedStatus = "warning"]',
         style: {
-          'line-color': '#ffeb3b',
+          'line-color': '#f59e0b',
           'line-style': 'solid',
-          width: 2,
+          width: 3,
+          'opacity': 0.9,
         },
       },
+      // Medium/Normal status - blue
       {
         selector: 'edge[speedStatus = "medium"]',
         style: {
-          'line-color': '#2196f3',
+          'line-color': '#3b82f6',
           'line-style': 'solid',
-          width: 2,
+          width: 2.5,
+          'opacity': 0.9,
         },
       },
+      // Good status - green
       {
         selector: 'edge[speedStatus = "good"]',
         style: {
-          'line-color': '#4caf50',
+          'line-color': '#10b981',
           'line-style': 'solid',
-          width: 2,
+          width: 2.5,
+          'opacity': 0.9,
         },
       },
+      // Primary connection type
       {
         selector: 'edge[type = "primary"]',
         style: {
           'line-color': (ele: any) => {
             const speedColor = ele.data('speedColor');
-            return speedColor || '#4caf50';
+            return speedColor || '#10b981';
           },
-          width: 2,
+          width: 3,
         },
       },
+      // Secondary connection type
       {
         selector: 'edge[type = "secondary"]',
         style: {
           'line-color': (ele: any) => {
             const speedColor = ele.data('speedColor');
-            return speedColor || '#ff9800';
+            return speedColor || '#f59e0b';
           },
-          width: 2,
+          width: 2.5,
           'line-style': 'solid',
         },
       },
+      // Trunk connection type
       {
         selector: 'edge[type = "trunk"]',
         style: {
           'line-color': (ele: any) => {
             const speedColor = ele.data('speedColor');
-            return speedColor || '#9c27b0';
+            return speedColor || '#8b5cf6';
           },
-          width: 2,
+          width: 3,
+        },
+      },
+      // Hover state for edges
+      {
+        selector: 'edge:active',
+        style: {
+          width: 5,
+          'opacity': 1,
         },
       },
     ];
