@@ -1,0 +1,11 @@
+<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <rect x="10" y="15" width="40" height="30" fill="#e6f2fa" stroke="#d9534f" stroke-width="2"/>
+  <!-- Rows -->
+  <line x1="10" y1="25" x2="50" y2="25" stroke="#d9534f" stroke-width="1.5"/>
+  <line x1="10" y1="35" x2="50" y2="35" stroke="#d9534f" stroke-width="1.5"/>
+  <!-- Bricks -->
+  <line x1="20" y1="15" x2="20" y2="25" stroke="#d9534f" stroke-width="1.5"/>
+  <line x1="30" y1="25" x2="30" y2="35" stroke="#d9534f" stroke-width="1.5"/>
+  <line x1="40" y1="15" x2="40" y2="25" stroke="#d9534f" stroke-width="1.5"/>
+  <line x1="20" y1="35" x2="20" y2="45" stroke="#d9534f" stroke-width="1.5"/>
+</svg>

@@ -1,0 +1,23 @@
+<svg width="70" height="70" viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer rounded body -->
+  <rect x="10" y="15" width="50" height="30" rx="8" fill="#f0f5ff" stroke="#0056b3" stroke-width="2"/>
+
+  <!-- Central darker stripe -->
+  <rect x="10" y="25" width="50" height="10" fill="#0056b3" />
+
+  <!-- Left-side ports -->
+  <rect x="14" y="27" width="3" height="6" fill="#b3d1ff" />
+  <rect x="19" y="27" width="3" height="6" fill="#b3d1ff" />
+  <rect x="24" y="27" width="3" height="6" fill="#b3d1ff" />
+
+  <!-- Right-side ports -->
+  <rect x="43" y="27" width="3" height="6" fill="#b3d1ff" />
+  <rect x="48" y="27" width="3" height="6" fill="#b3d1ff" />
+  <rect x="53" y="27" width="3" height="6" fill="#b3d1ff" />
+
+  <!-- Small indicator light -->
+  <circle cx="34" cy="21" r="2" fill="#00cc44" />
+
+  <!-- Label -->
+  <!-- <text x="35" y="60" text-anchor="middle" font-size="11" font-family="Arial" fill="#003366">Core Switch</text> -->
+</svg>

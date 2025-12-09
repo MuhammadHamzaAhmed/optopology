@@ -1,0 +1,685 @@
+<!-- Always show the import controls -->
+<div class="import-controls">
+  <img
+    src="assets/alrajhilogo.png"
+    alt="Logo"
+    height="35px"
+    style="margin-left: 25px"
+  />
+  <div class="import-controls-inner">
+    <button
+      *ngIf="permission"
+      style="padding: 6px 25px"
+      nbButton
+      status="primary"
+      shape="round"
+      size="small"
+      (click)="goToViewTopology()"
+      title="Go to Edit topology"
+    >
+      <i class="fa-solid fa-arrow-left"></i>
+      View Topology
+    </button>
+    <button
+      *ngIf="permission"
+      style="padding: 6px 25px"
+      nbButton
+      status="primary"
+      shape="round"
+      size="small"
+      (click)="importData()"
+    >
+      <i class="fa-solid fa-arrow-left"></i>
+      Data Table
+    </button>
+    <button
+      style="padding: 6px 25px"
+      nbButton
+      status="primary"
+      shape="round"
+      size="small"
+      (click)="refreshFromBackend()"
+      title="Refresh topology data from backend"
+    >
+      🔄 Refresh
+    </button>
+    <button
+      *ngIf="permission"
+      style="padding: 6px 25px"
+      nbButton
+      status="primary"
+      [class.warning-button]="hasUnsavedPositions()"
+      shape="round"
+      size="small"
+      (click)="saveAllPositions()"
+      [title]="
+        hasUnsavedPositions()
+          ? 'Save ' +
+            getUnsavedPositionsCount() +
+            ' unsaved positions to backend'
+          : 'No unsaved positions'
+      "
+      [disabled]="!hasUnsavedPositions()"
+    >
+      💾 Save Positions
+      <!-- <span
+        *ngIf="hasUnsavedPositions()"
+        style="
+          margin-left: 5px;
+          background: #ff6b6b;
+          color: white;
+          border-radius: 10px;
+          padding: 2px 6px;
+          font-size: 10px;
+        "
+      >
+        {{ getUnsavedPositionsCount() }}
+      </span> -->
+    </button>
+    <!-- Commented out auto-refresh controls
+    <div
+      class="auto-refresh-info"
+      style="
+        margin-left: 15px;
+        color: #27ae60;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+      "
+    >
+      <span *ngIf="isAutoRefreshActive()" class="auto-refresh-icon">🔄</span>
+      <span *ngIf="!isAutoRefreshActive()" class="auto-refresh-icon">⏸️</span>
+      Auto-refresh in {{ getFormattedCountdown() }}
+    </div>
+    <button
+      style="padding: 6px 15px; margin-left: 10px"
+      nbButton
+      status="success"
+      shape="round"
+      size="small"
+      (click)="toggleAutoRefresh()"
+      [title]="
+        isAutoRefreshActive() ? 'Stop Auto-refresh' : 'Start Auto-refresh'
+      "
+      [style.background-color]="isAutoRefreshActive() ? '#f39c12' : '#27ae60'"
+    >
+      {{ isAutoRefreshActive() ? "⏸️ Stop" : "▶️ Start" }} Auto-refresh
+    </button>
+    -->
+    <div *ngIf="!isFullscreen" class="legend-toggle">
+      <button
+        class="legend-toggle-btn"
+        (click)="toggleLegend()"
+        [title]="showLegend ? 'Hide Legend' : 'Show Legend'"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+          />
+        </svg>
+        <span>{{ showLegend ? "Hide" : "Show" }} Legend</span>
+      </button>
+    </div>
+
+    <button
+      style="padding: 6px 25px"
+      nbButton
+      status="primary"
+      shape="round"
+      size="small"
+      (click)="toggleFullscreen()"
+      [title]="isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'"
+    >
+      Full Screen
+    </button>
+    <!-- <input
+      type="file"
+      (change)="onFileSelect($event)"
+      accept=".xlsx, .xls"
+      hidden
+      #fileInput
+    /> -->
+    <!-- <button
+      *ngIf="this.fileData.length == 0 && !hasLocalStorageData()"
+      nbButton
+      style="padding: 6px 25px"
+      status="primary"
+      shape="round"
+      size="small"
+      (click)="fileInput.click()"
+    >
+      Import Excel
+    </button> -->
+    <!-- <button
+      *ngIf="hasLocalStorageData()"
+      nbButton
+      style="padding: 6px 25px"
+      status="danger"
+      shape="round"
+      size="small"
+      (click)="clearData()"
+    >
+      Clear Data
+    </button> -->
+  </div>
+</div>
+
+<!-- Topology container is always present so Cytoscape can initialize -->
+<div class="topology-container">
+  <!-- Main topology area -->
+  <div class="topology-main" [class.fullscreen-mode]="isFullscreen">
+    <div #cy id="cy"></div>
+  </div>
+
+  <!-- Legend toggle button - only visible when NOT in fullscreen -->
+
+  <!-- Legend panel - only visible when NOT in fullscreen and toggled on -->
+  <div *ngIf="!isFullscreen && showLegend" class="legend-panel">
+    <div class="legend-content">
+      <div class="legend-header">
+        <h3>Network Legend</h3>
+        <button
+          class="legend-close-btn"
+          (click)="toggleLegend()"
+          title="Close Legend"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Healths -->
+      <div class="legend-section">
+        <h4>Network Health</h4>
+        <div class="legend-items">
+          <div class="legend-item">
+            <span>Up Devices</span>
+            <span>{{ getDeviceStatusCount("on") }}</span>
+          </div>
+          <div class="legend-item">
+            <span>Down Devices</span>
+            <span>{{ getDeviceStatusCount("off") }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Device Types -->
+      <div class="legend-section">
+        <h4>Device Types</h4>
+        <div class="legend-items">
+          <div class="legend-item">
+            <img src="assets/firewall_new.svg" alt="Firewall" />
+            <span>Firewall</span>
+          </div>
+          <div class="legend-item">
+            <img src="assets/realSwitch.svg" alt="Switch" />
+            <span>Switch</span>
+          </div>
+          <div class="legend-item">
+            <img src="assets/coreSwitch_real.svg" alt="Core Switch" />
+            <span>Core Switch</span>
+          </div>
+          <div class="legend-item">
+            <img src="assets/router_real.svg" alt="Router" />
+            <span>Router</span>
+          </div>
+          <div class="legend-item">
+            <img src="assets/proxy.svg" alt="Server" />
+            <span>Server</span>
+          </div>
+          <div class="legend-item">
+            <img src="assets/real_internet_2.svg" alt="Internet" />
+            <span>Internet</span>
+          </div>
+          <div class="legend-item">
+            <img src="assets/ips.svg" alt="IPS" />
+            <span>IPS</span>
+          </div>
+          <div class="legend-item">
+            <img src="assets/isp.svg" alt="ISP" />
+            <span>ISP</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Network Blocks -->
+      <div class="legend-section">
+        <h4>Network Blocks</h4>
+        <div class="legend-items">
+          <div class="legend-item">
+            <div class="legend-box legend-box--internet"></div>
+            <span>Internet Block</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-box legend-box--wan"></div>
+            <span>WAN Block</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-box legend-box--datacenter"></div>
+            <span>Data Center</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-box legend-box--replication"></div>
+            <span>Replication</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-box legend-box--oob"></div>
+            <span>Out of Band</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-box legend-box--extranet"></div>
+            <span>Extranet</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-box legend-box--visibility"></div>
+            <span>Visibility</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-box legend-box--dmz"></div>
+            <span>DMZ</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connection Status -->
+      <div class="legend-section">
+        <h4>Connection Status</h4>
+        <div class="legend-items">
+          <div class="legend-item">
+            <div class="legend-line legend-line--critical"></div>
+            <span>≥90% or 0% (Critical)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-line legend-line--warning"></div>
+            <span>≥70% (Warning)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-line legend-line--normal"></div>
+            <span>≥50% (Medium)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-line legend-line--good"></div>
+            <span>≤50% (Good)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Device Status -->
+      <div class="legend-section">
+        <h4>Device Status</h4>
+        <div class="legend-items">
+          <div class="legend-item">
+            <div class="status-indicator status-indicator--online"></div>
+            <span>&nbsp;&nbsp;&nbsp;&nbsp;Online</span>
+          </div>
+          <div class="legend-item">
+            <div class="status-indicator status-indicator--offline"></div>
+            <span>&nbsp;&nbsp;&nbsp;&nbsp;Offline</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend icon - only visible in fullscreen -->
+  <div
+    *ngIf="isFullscreen"
+    class="legend-icon"
+    (mouseenter)="showLegendTooltip($event)"
+    (mouseleave)="hideLegendTooltip()"
+    title="Network Legend"
+  >
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path
+        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+      />
+    </svg>
+  </div>
+
+  <!-- Legend tooltip for fullscreen mode -->
+  <div
+    *ngIf="isFullscreen && showTooltip"
+    class="legend-tooltip"
+    [style.left.px]="tooltipX"
+    [style.top.px]="tooltipY"
+  >
+    <div class="tooltip-content">
+      <h4>Network Legend</h4>
+
+      <!-- Device Types -->
+      <div class="tooltip-section">
+        <strong>Device Types</strong>
+        <div class="tooltip-items">
+          <div class="tooltip-item">
+            <img src="assets/firewall_new.svg" alt="Firewall" />
+            <span>Firewall</span>
+          </div>
+          <div class="tooltip-item">
+            <img src="assets/realSwitch.svg" alt="Switch" />
+            <span>Switch</span>
+          </div>
+          <div class="tooltip-item">
+            <img src="assets/coreSwitch_real.svg" alt="Core Switch" />
+            <span>Core Switch</span>
+          </div>
+          <div class="tooltip-item">
+            <img src="assets/router_real.svg" alt="Router" />
+            <span>Router</span>
+          </div>
+          <div class="tooltip-item">
+            <img src="assets/proxy.svg" alt="Server" />
+            <span>Server</span>
+          </div>
+          <div class="tooltip-item">
+            <img src="assets/real_internet_2.svg" alt="Internet" />
+            <span>Internet</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Network Blocks -->
+      <div class="tooltip-section">
+        <strong>Network Blocks</strong>
+        <div class="tooltip-items">
+          <div class="tooltip-item">
+            <div class="tooltip-box tooltip-box--internet"></div>
+            <span>Internet Block</span>
+          </div>
+          <div class="tooltip-item">
+            <div class="tooltip-box tooltip-box--wan"></div>
+            <span>WAN Block</span>
+          </div>
+          <div class="tooltip-item">
+            <div class="tooltip-box tooltip-box--datacenter"></div>
+            <span>Data Center</span>
+          </div>
+          <div class="tooltip-item">
+            <div class="tooltip-box tooltip-box--replication"></div>
+            <span>Replication</span>
+          </div>
+          <div class="tooltip-item">
+            <div class="tooltip-box tooltip-box--oob"></div>
+            <span>Out of Band</span>
+          </div>
+          <div class="tooltip-item">
+            <div class="tooltip-box tooltip-box--external"></div>
+            <span>External</span>
+          </div>
+          <div class="tooltip-item">
+            <div class="tooltip-box tooltip-box--extranet"></div>
+            <span>Extranet</span>
+          </div>
+          <div class="tooltip-item">
+            <div class="tooltip-box tooltip-box--visibility"></div>
+            <span>Visibility</span>
+          </div>
+          <div class="tooltip-item">
+            <div class="tooltip-box tooltip-box--dmz"></div>
+            <span>DMZ</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connection Status -->
+      <div class="tooltip-section">
+        <strong>Connection Status</strong>
+        <div class="tooltip-items">
+          <div class="tooltip-item">
+            <div class="tooltip-line tooltip-line--critical"></div>
+            <span>≥90% or 0% (Critical)</span>
+          </div>
+          <div class="tooltip-item">
+            <div class="tooltip-line tooltip-line--warning"></div>
+            <span>≥70% (Warning)</span>
+          </div>
+          <div class="tooltip-item">
+            <div class="tooltip-line tooltip-line--normal"></div>
+            <span>≥50% (Medium)</span>
+          </div>
+          <div class="tooltip-item">
+            <div class="tooltip-line tooltip-line--good"></div>
+            <span>≤50% (Good)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Device Status -->
+      <div class="tooltip-section">
+        <strong>Device Status</strong>
+        <div class="tooltip-items">
+          <div class="tooltip-item">
+            <div class="tooltip-status tooltip-status--online"></div>
+            <span>Online</span>
+          </div>
+          <div class="tooltip-item">
+            <div class="tooltip-status tooltip-status--offline"></div>
+            <span>Offline</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logo overlay - only visible in fullscreen -->
+  <div *ngIf="isFullscreen" class="logo-overlay">
+    <img src="assets/alrajhilogo.png" alt="Logo" height="45px" />
+  </div>
+
+  <!-- UP Devices Count - only visible in fullscreen -->
+  <div *ngIf="isFullscreen && shouldShowUI" class="fullscreen-up-devices">
+    <div class="fullscreen-indicator-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+        />
+      </svg>
+    </div>
+    <div class="fullscreen-indicator-content">
+      <div class="fullscreen-indicator-number">
+        {{ getDeviceStatusCount("on") }}
+      </div>
+      <div class="fullscreen-indicator-label">UP Devices</div>
+    </div>
+  </div>
+
+  <!-- DOWN Devices Count - only visible in fullscreen -->
+  <div *ngIf="isFullscreen && shouldShowUI" class="fullscreen-down-devices">
+    <div class="fullscreen-indicator-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+        />
+      </svg>
+    </div>
+    <div class="fullscreen-indicator-content">
+      <div class="fullscreen-indicator-number">
+        {{ getDeviceStatusCount("off") }}
+      </div>
+      <div class="fullscreen-indicator-label">DOWN Devices</div>
+    </div>
+  </div>
+
+  <!-- Speed Status Critical Count - only visible in fullscreen -->
+  <div *ngIf="isFullscreen && shouldShowUI" class="fullscreen-speed-critical">
+    <div class="fullscreen-indicator-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+        />
+      </svg>
+    </div>
+    <div class="fullscreen-indicator-content">
+      <div class="fullscreen-indicator-number">
+        {{ getSpeedStatusCounts().critical }}
+      </div>
+      <div class="fullscreen-indicator-label">Critical</div>
+    </div>
+  </div>
+
+  <!-- Speed Status Warning Count - only visible in fullscreen -->
+  <div *ngIf="isFullscreen && shouldShowUI" class="fullscreen-speed-warning">
+    <div class="fullscreen-indicator-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+      </svg>
+    </div>
+    <div class="fullscreen-indicator-content">
+      <div class="fullscreen-indicator-number">
+        {{ getSpeedStatusCounts().warning }}
+      </div>
+      <div class="fullscreen-indicator-label">Warning</div>
+    </div>
+  </div>
+
+  <!-- Speed Status Normal Count - only visible in fullscreen -->
+  <div *ngIf="isFullscreen && shouldShowUI" class="fullscreen-speed-normal">
+    <div class="fullscreen-indicator-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path
+          d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+        />
+      </svg>
+    </div>
+    <div class="fullscreen-indicator-content">
+      <div class="fullscreen-indicator-number">
+        {{ getSpeedStatusCounts().normal }}
+      </div>
+      <div class="fullscreen-indicator-label">Normal</div>
+    </div>
+  </div>
+
+  <!-- Speed Status Good Count - only visible in fullscreen -->
+  <div *ngIf="isFullscreen && shouldShowUI" class="fullscreen-speed-good">
+    <div class="fullscreen-indicator-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+      </svg>
+    </div>
+    <div class="fullscreen-indicator-content">
+      <div class="fullscreen-indicator-number">
+        {{ getSpeedStatusCounts().good }}
+      </div>
+      <div class="fullscreen-indicator-label">Good</div>
+    </div>
+  </div>
+
+  <!-- Last Updated Timestamp -->
+  <div class="last-updated-timestamp">
+    <span class="timestamp-label">Last Updated at:</span>
+    <span class="timestamp-value">{{ lastUpdatedTime }}</span>
+  </div>
+
+  <!-- Recenter button -->
+  <button class="recenter-btn" (click)="recenterView()" title="Recenter View">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+      <path
+        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+      />
+    </svg>
+  </button>
+
+  <!-- Fullscreen button -->
+  <button
+    class="fullscreen-btn"
+    (click)="toggleFullscreen()"
+    [title]="isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'"
+  >
+    <svg
+      *ngIf="!isFullscreen"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path
+        d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"
+      />
+    </svg>
+    <svg
+      *ngIf="isFullscreen"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path
+        d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"
+      />
+    </svg>
+  </button>
+</div>
+
+<!-- Loading overlay shown while requests are in-flight -->
+<div *ngIf="isLoadingData" class="no-data-overlay">
+  <div class="no-data-content">
+    <div class="no-data-icon">
+      <svg
+        width="64"
+        height="64"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        opacity="0.7"
+      >
+        <path
+          d="M12 22c5.52 0 10-4.48 10-10h-2a8 8 0 1 1-8-8V2C6.48 2 2 6.48 2 12s4.48 10 10 10z"
+        />
+      </svg>
+    </div>
+    <h2 class="no-data-title">Loading...</h2>
+    <p class="no-data-description">
+      Fetching latest topology data from backend.
+    </p>
+  </div>
+</div>
+
+<!-- Show a centered message when there's no data (only if last load failed) -->
+<div
+  *ngIf="!isLoadingData && !shouldShowUI && loadFailed"
+  class="no-data-overlay"
+>
+  <div class="no-data-content">
+    <div class="no-data-icon">
+      <svg
+        width="64"
+        height="64"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        opacity="0.5"
+      >
+        <path
+          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+        />
+      </svg>
+    </div>
+    <h2 class="no-data-title">No Data Found</h2>
+    <p class="no-data-description">
+      No network topology data is available. Please refresh to load data from
+      the backend.
+    </p>
+    <div class="no-data-actions">
+      <button
+        nbButton
+        status="primary"
+        shape="round"
+        size="medium"
+        (click)="refreshFromBackend()"
+        class="no-data-btn no-data-btn-primary"
+      >
+        🔄 Refresh Data
+      </button>
+      <button
+        nbButton
+        status="success"
+        shape="round"
+        size="medium"
+        (click)="goToExcelTable()"
+        class="no-data-btn no-data-btn-secondary"
+      >
+        📊 Go to Excel Table
+      </button>
+    </div>
+  </div>
+</div>

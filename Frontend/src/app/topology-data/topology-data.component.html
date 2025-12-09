@@ -1,0 +1,1258 @@
+<div class="excel-table-container">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="header-content">
+      <div class="header-text">
+        <h2 class="page-title">Excel Data Table Viewer</h2>
+        <p class="page-description">
+          Import Excel files and view network device data in a structured table
+          format
+        </p>
+      </div>
+      <div class="header-actions">
+        <button
+          *ngIf="permission"
+          class="btn btn-topology"
+          routerLink="/topology"
+        >
+          <i class="fa-solid fa-network-wired"></i>
+          Back to Topology
+        </button>
+        <button
+          *ngIf="permission"
+          class="btn btn-topology"
+          routerLink="/edit-network-topology"
+        >
+          <i class="fa-solid fa-network-wired"></i>
+          Back to Edit Topology
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Excel Import Section - Always visible when no data, or when explicitly shown -->
+  <div class="excel-import-section" *ngIf="showExcelImport || !hasData()">
+    <div class="import-content">
+      <div class="import-text">
+        <h3>
+          <i class="fa-solid fa-file-excel"></i>
+          Import Excel File
+        </h3>
+        <p>Upload an Excel file to populate the network topology table</p>
+      </div>
+      <div class="import-actions">
+        <div class="file-input-wrapper">
+          <input
+            type="file"
+            id="excelFileInput"
+            accept=".xlsx,.xls"
+            (change)="onFileSelect($event)"
+            style="display: none"
+          />
+          <label for="excelFileInput" class="btn btn-import">
+            <i class="fa-solid fa-upload"></i>
+            Choose Excel File
+          </label>
+        </div>
+        <div class="file-info" *ngIf="fileName">
+          <i class="fa-solid fa-file-check"></i>
+          <span>{{ fileName }}</span>
+          <!-- <button class="btn btn-process" (click)="processExcelFile()">
+            <i class="fa-solid fa-play"></i>
+            Process File
+          </button> -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Indicator -->
+  <div class="loading-section" *ngIf="isLoading">
+    <div class="loading-spinner">
+      <i class="fas fa-spinner fa-spin"></i>
+      <span>Processing Excel file...</span>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div class="error-section" *ngIf="errorMessage">
+    <div class="error-card">
+      <i class="fas fa-exclamation-triangle"></i>
+      <span>{{ errorMessage }}</span>
+    </div>
+  </div>
+
+  <!-- Data Summary and Actions Row -->
+  <div class="summary-actions-row" *ngIf="hasData()">
+    <!-- Left Side - Summary Info -->
+    <div class="summary-info">
+      <div class="summary-item">
+        <i class="fa-solid fa-table"></i>
+        <span class="summary-label">Total Records:</span>
+        <span class="summary-value">{{ getRowCount() }}</span>
+      </div>
+      <div class="summary-item">
+        <i class="fa-solid fa-cube"></i>
+        <span class="summary-label">With Blocks:</span>
+        <span class="summary-value block-assigned">{{
+          getRecordsWithBlocks()
+        }}</span>
+      </div>
+      <div class="summary-item">
+        <i class="fa-solid fa-exclamation-triangle"></i>
+        <span class="summary-label">Without Blocks:</span>
+        <span class="summary-value block-missing">{{
+          getRecordsWithoutBlocks()
+        }}</span>
+      </div>
+      <div class="summary-item" *ngIf="searchTerm">
+        <i class="fa-solid fa-filter"></i>
+        <span class="summary-label">Filtered:</span>
+        <span class="summary-value">{{ getFilteredData().length }}</span>
+      </div>
+    </div>
+
+    <!-- Right Side - Action Buttons -->
+    <div class="action-buttons">
+      <button
+        *ngIf="permission"
+        class="btn btn-import"
+        (click)="showExcelImportSection()"
+      >
+        <i class="fa-solid fa-file-excel"></i>
+        Add Excel File
+      </button>
+      <button *ngIf="permission" class="btn btn-add" (click)="addNewRecord()">
+        <i class="fa-solid fa-plus"></i>
+        Add Record
+      </button>
+      <button class="btn btn-export" (click)="exportToCSV()">
+        <i class="fa-solid fa-download"></i>
+        Export CSV
+      </button>
+      <button class="btn btn-blocks" (click)="showBlocksDetail()">
+        <i class="fa-solid fa-cube"></i>
+        Blocks Detail
+      </button>
+      <button
+        *ngIf="permission && getSelectedRows().length > 0"
+        class="btn btn-delete"
+        (click)="showMultiRowDeleteConfirm()"
+      >
+        <i class="fa-solid fa-trash"></i>
+        Delete Selected ({{ getSelectedRows().length }})
+      </button>
+    </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-section" *ngIf="hasData()">
+    <div class="search-container">
+      <i class="fa-solid fa-search"></i>
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        placeholder="Search by IP, hostname, interface, type, vendor, block, or comments..."
+        class="search-input"
+      />
+      <button
+        *ngIf="searchTerm"
+        class="btn-clear-search"
+        (click)="clearSearch()"
+        title="Clear search"
+      >
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Additional Actions Row -->
+  <!-- <div class="additional-actions" *ngIf="hasData()">
+    <button
+      class="btn btn-secondary"
+      (click)="bulkAssignBlocks()"
+      *ngIf="getRecordsWithoutBlocks() > 0"
+    >
+      <i class="fa-solid fa-magic"></i>
+      Auto-Assign All Blocks
+    </button>
+    <button class="btn btn-secondary" (click)="checkAndAssignBlocksFromExcel()">
+      <i class="fa-solid fa-file-check"></i>
+      Check Excel Blocks
+    </button>
+    <button class="btn btn-secondary" (click)="showDeviceTypeUpdateForm()">
+      <i class="fa-solid fa-tag"></i>
+      Update Device Type
+    </button>
+    <button class="btn btn-clear" (click)="clearData()">
+      <i class="fa-solid fa-trash"></i>
+      Clear Data
+    </button>
+  </div> -->
+
+  <!-- Modal Overlay -->
+  <div
+    class="modal-overlay"
+    *ngIf="
+      showAddForm ||
+      showEditForm ||
+      showDeviceTypeForm ||
+      showBlocksModal ||
+      showDeleteBlockConfirm
+    "
+    (click)="
+      showDeviceTypeForm
+        ? cancelDeviceTypeForm()
+        : showBlocksModal
+        ? closeBlocksModal()
+        : cancelEdit()
+    "
+  ></div>
+
+  <!-- Add/Edit Modal -->
+  <div class="modal" *ngIf="showAddForm || showEditForm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>
+          <i
+            class="fa-solid"
+            [class.fa-plus]="showAddForm"
+            [class.fa-pen-to-square]="showEditForm"
+          ></i>
+          {{ showAddForm ? "Add New Record" : "Edit Record" }}
+        </h3>
+        <button class="btn btn-close" (click)="cancelEdit()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Device A Section -->
+        <div class="form-section-title">
+          <i class="fa-solid fa-server"></i>
+          <span>Device A Configuration</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-network-wired"></i> Device A IP</label>
+            <input
+              type="text"
+              [(ngModel)]="formData.device_a_ip"
+              placeholder="192.168.1.1"
+            />
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-tag"></i> Device A Hostname</label>
+            <input
+              type="text"
+              [(ngModel)]="formData.device_a_hostname"
+              placeholder="Core-Switch-01"
+            />
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-plug"></i> Device A Interface</label>
+            <input
+              type="text"
+              [(ngModel)]="formData.device_a_interface"
+              placeholder="Gi0/1"
+            />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-server"></i> Device A Type</label>
+            <select [(ngModel)]="formData.device_a_type" class="block-select">
+              <option value="">-- Select Device Type --</option>
+              <option *ngFor="let type of availableDeviceTypes" [value]="type">
+                {{ type | titlecase }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-building"></i> Device A Vendor</label>
+            <select [(ngModel)]="formData.device_a_vendor" class="block-select">
+              <option value="">-- Select Vendor --</option>
+              <option *ngFor="let vendor of availableVendors" [value]="vendor">
+                {{ vendor }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-cube"></i> Device A Block</label>
+            <select [(ngModel)]="formData.device_a_block" class="block-select">
+              <option [ngValue]="null">-- No Block Assigned --</option>
+              <option
+                *ngFor="let block of blocksList"
+                [value]="block.BLOCK_NAME"
+              >
+                {{ block.BLOCK_NAME | titlecase }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-magic"></i> Auto-Assign Block</label>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              (click)="autoAssignBlockA()"
+            >
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              Auto-Assign
+            </button>
+          </div>
+        </div>
+
+        <hr class="form-section-divider" />
+
+        <!-- Device B Section -->
+        <div class="form-section-title">
+          <i class="fa-solid fa-server"></i>
+          <span>Device B Configuration</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-network-wired"></i> Device B IP</label>
+            <input
+              type="text"
+              [(ngModel)]="formData.device_b_ip"
+              placeholder="192.168.1.2"
+            />
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-tag"></i> Device B Hostname</label>
+            <input
+              type="text"
+              [(ngModel)]="formData.device_b_hostname"
+              placeholder="Access-Switch-01"
+            />
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-plug"></i> Device B Interface</label>
+            <input
+              type="text"
+              [(ngModel)]="formData.device_b_interface"
+              placeholder="Gi0/1"
+            />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-server"></i> Device B Type</label>
+            <select [(ngModel)]="formData.device_b_type" class="block-select">
+              <option value="">-- Select Device Type --</option>
+              <option *ngFor="let type of availableDeviceTypes" [value]="type">
+                {{ type | titlecase }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-vendor"></i> Device B Vendor</label>
+            <select [(ngModel)]="formData.device_b_vendor" class="block-select">
+              <option value="">-- Select Vendor --</option>
+              <option *ngFor="let vendor of availableVendors" [value]="vendor">
+                {{ vendor }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-cube"></i> Device B Block</label>
+            <select [(ngModel)]="formData.device_b_block" class="block-select">
+              <option [ngValue]="null">-- No Block Assigned --</option>
+              <option
+                *ngFor="let block of blocksList"
+                [value]="block.BLOCK_NAME"
+              >
+                {{ block.BLOCK_NAME | titlecase }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-magic"></i> Auto-Assign Block</label>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              (click)="autoAssignBlockB()"
+            >
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              Auto-Assign
+            </button>
+          </div>
+        </div>
+
+        <hr class="form-section-divider" />
+
+        <!-- Comments Section -->
+        <div class="form-section-title">
+          <i class="fa-solid fa-comment"></i>
+          <span>Additional Information</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group full-width">
+            <label><i class="fa-solid fa-comment"></i> Comments</label>
+            <textarea
+              [(ngModel)]="formData.comments"
+              placeholder="Connection description, notes, or additional details..."
+            ></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-save" (click)="saveRecord()">
+          <i class="fa-solid fa-floppy-disk"></i>
+          {{ showAddForm ? "Add Record" : "Update Record" }}
+        </button>
+        <button class="btn btn-cancel" (click)="cancelEdit()">
+          <i class="fa-solid fa-xmark"></i>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div
+    class="modal-overlay"
+    *ngIf="showDeleteConfirm"
+    (click)="cancelDelete()"
+  ></div>
+
+  <div class="modal delete-modal" *ngIf="showDeleteConfirm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          Confirm Delete
+        </h3>
+        <button class="btn btn-close" (click)="cancelDelete()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="delete-message">
+          <i class="fa-solid fa-trash-can"></i>
+          <p>Are you sure you want to delete this record?</p>
+          <div class="delete-preview" *ngIf="deletingRow">
+            <strong>Device A:</strong> {{ deletingRow.device_a_hostname }} ({{
+              deletingRow.device_a_ip
+            }})<br />
+            <strong>Device B:</strong> {{ deletingRow.device_b_hostname }} ({{
+              deletingRow.device_b_ip
+            }})
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-delete-confirm" (click)="confirmDelete()">
+          <i class="fa-solid fa-trash-can"></i>
+          Delete Record
+        </button>
+        <button class="btn btn-cancel" (click)="cancelDelete()">
+          <i class="fa-solid fa-xmark"></i>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Delete By Host/IP Modal Overlay -->
+  <div
+    class="modal-overlay"
+    *ngIf="showBulkDeleteModal"
+    (click)="cancelBulkDelete()"
+  ></div>
+
+  <!-- Bulk Delete By Host/IP Modal -->
+  <div class="modal" *ngIf="showBulkDeleteModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>
+          <i class="fa-solid fa-trash"></i>
+          Bulk Delete By Host/IP
+        </h3>
+        <button class="btn btn-close" (click)="cancelBulkDelete()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-section-title">
+          <i class="fa-solid fa-arrows-left-right"></i>
+          <span>Select Device Side or Enter Details</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label
+              ><i class="fa-solid fa-arrows-left-right"></i> Device Side</label
+            >
+            <select
+              [(ngModel)]="bulkDeleteSelection.device_side"
+              class="block-select"
+              (change)="onBulkDeleteSideChange()"
+            >
+              <option value="">-- Select Device Side --</option>
+              <option value="A">Device A</option>
+              <option value="B">Device B</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-user"></i> Updated By</label>
+            <input
+              type="text"
+              [(ngModel)]="bulkDeleteSelection.updated_by"
+              placeholder="system"
+            />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-tag"></i> Hostname</label>
+            <input
+              type="text"
+              [(ngModel)]="bulkDeleteSelection.hostname"
+              placeholder="Core-Switch-01"
+            />
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-network-wired"></i> IP</label>
+            <input
+              type="text"
+              [(ngModel)]="bulkDeleteSelection.ip"
+              placeholder="192.168.1.1"
+            />
+          </div>
+        </div>
+
+        <div class="delete-preview" *ngIf="bulkDeletePreviewRow">
+          <strong>Preview:</strong>
+          <div style="margin-top: 6px">
+            <strong>Device A:</strong>
+            {{ bulkDeletePreviewRow.device_a_hostname }} ({{
+              bulkDeletePreviewRow.device_a_ip
+            }})
+          </div>
+          <div>
+            <strong>Device B:</strong>
+            {{ bulkDeletePreviewRow.device_b_hostname }} ({{
+              bulkDeletePreviewRow.device_b_ip
+            }})
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          class="btn btn-delete-confirm"
+          (click)="confirmBulkDeleteByHostIp()"
+          [disabled]="isLoading"
+        >
+          <i class="fa-solid fa-trash"></i>
+          {{ isLoading ? "Deleting..." : "Delete All Matches" }}
+        </button>
+        <button class="btn btn-cancel" (click)="cancelBulkDelete()">
+          <i class="fa-solid fa-xmark"></i>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Result Modal Overlay -->
+  <div
+    class="modal-overlay"
+    *ngIf="showImportResultModal"
+    (click)="showImportResultModal = false"
+  ></div>
+
+  <!-- Import Result Modal -->
+  <div class="modal" *ngIf="showImportResultModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>
+          <i class="fa-solid fa-circle-check"></i>
+          Import Result
+        </h3>
+        <button class="btn btn-close" (click)="showImportResultModal = false">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body" *ngIf="importResult as r">
+        <div class="summary-items">
+          <div class="summary-item">
+            <i class="fa-solid fa-check"></i>
+            <span class="summary-label">Inserted:</span>
+            <span class="summary-value">{{ r.inserted_count }}</span>
+          </div>
+          <div class="summary-item">
+            <i class="fa-solid fa-ban"></i>
+            <span class="summary-label">Skipped:</span>
+            <span class="summary-value">{{ r.skipped_count }}</span>
+          </div>
+          <div class="summary-item">
+            <i class="fa-solid fa-database"></i>
+            <span class="summary-label">Total Rows:</span>
+            <span class="summary-value">{{ r.total_records }}</span>
+          </div>
+        </div>
+        <div class="message" *ngIf="r.message">{{ r.message }}</div>
+
+        <!-- Block Analysis Section -->
+        <div class="block-analysis" *ngIf="hasExtractedBlocks()">
+          <h4><i class="fa-solid fa-cube"></i> Block Creation Results</h4>
+          <div class="block-summary">
+            <div class="summary-item">
+              <i class="fa-solid fa-plus-circle"></i>
+              <span class="summary-label">Blocks Created:</span>
+              <span class="summary-value success">{{
+                getBlockCreationResults().created
+              }}</span>
+            </div>
+            <div class="summary-item">
+              <i class="fa-solid fa-ban"></i>
+              <span class="summary-label">Blocks Skipped (Already Exist):</span>
+              <span class="summary-value warning">{{
+                getBlockCreationResults().skipped
+              }}</span>
+            </div>
+            <div class="summary-item">
+              <i class="fa-solid fa-cubes"></i>
+              <span class="summary-label">Total Blocks Found:</span>
+              <span class="summary-value">{{
+                getBlockCreationResults().total
+              }}</span>
+            </div>
+          </div>
+
+          <details style="margin-top: 10px">
+            <summary>
+              View extracted blocks ({{ getExtractedUniqueBlocks().length }})
+            </summary>
+            <div class="blocks-list-compact">
+              <div
+                class="block-item-compact"
+                *ngFor="let block of getExtractedUniqueBlocks()"
+              >
+                <span class="block-name">{{ block }}</span>
+                <span class="block-status">✓ Added to Database</span>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- <details style="margin-top: 10px">
+          <summary>View full response</summary>
+          <pre style="white-space: pre-wrap">{{ r | json }}</pre>
+        </details> -->
+
+        <details style="margin-top: 10px" *ngIf="r.skipped && r.skipped.length">
+          <summary>Skipped rows ({{ r.skipped.length }})</summary>
+          <ul>
+            <li *ngFor="let s of r.skipped">
+              {{ s.reason }}
+            </li>
+          </ul>
+        </details>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary" (click)="showImportResultModal = false">
+          <i class="fa-solid fa-check"></i>
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Update Error Modal Overlay -->
+  <div
+    class="modal-overlay"
+    *ngIf="showUpdateErrorModal"
+    (click)="showUpdateErrorModal = false"
+  ></div>
+
+  <!-- Update Error Modal -->
+  <div class="modal" *ngIf="showUpdateErrorModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>
+          <i class="fa-solid fa-circle-exclamation"></i>
+          Update Failed
+        </h3>
+        <button class="btn btn-close" (click)="showUpdateErrorModal = false">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body" *ngIf="updateError as err">
+        <div class="message" *ngIf="err.status">Status: {{ err.status }}</div>
+        <div class="message" *ngIf="err.message">{{ err.message }}</div>
+        <details style="margin-top: 10px" *ngIf="err.details">
+          <summary>View details</summary>
+          <pre style="white-space: pre-wrap">{{ err.details | json }}</pre>
+        </details>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary" (click)="showUpdateErrorModal = false">
+          <i class="fa-solid fa-check"></i>
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Device Type Update Modal -->
+  <div class="modal" *ngIf="showDeviceTypeForm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>
+          <i class="fa-solid fa-tag"></i>
+          Update Device Type
+        </h3>
+        <button class="btn btn-close" (click)="cancelDeviceTypeForm()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-section-title">
+          <i class="fa-solid fa-server"></i>
+          <span>Device Information</span>
+        </div>
+
+        <!-- Device Selection Row -->
+        <div class="form-row">
+          <div class="form-group">
+            <label
+              ><i class="fa-solid fa-arrows-left-right"></i> Select Device
+              Side</label
+            >
+            <select
+              [(ngModel)]="deviceTypeFormData.device_side"
+              class="block-select"
+              (change)="onDeviceSideChange()"
+            >
+              <option value="">-- Select Device Side --</option>
+              <option value="A">Device A</option>
+              <option value="B">Device B</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-user"></i> Updated By</label>
+            <input
+              type="text"
+              [(ngModel)]="deviceTypeFormData.updated_by"
+              placeholder="system"
+            />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-network-wired"></i> Device IP</label>
+            <input
+              type="text"
+              [(ngModel)]="deviceTypeFormData.device_ip"
+              placeholder="192.168.1.1"
+            />
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-tag"></i> Device Hostname</label>
+            <input
+              type="text"
+              [(ngModel)]="deviceTypeFormData.device_hostname"
+              placeholder="Core-Switch-01"
+            />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-server"></i> New Device Type</label>
+            <select
+              [(ngModel)]="deviceTypeFormData.new_device_type"
+              class="block-select"
+            >
+              <option value="">-- Select Device Type --</option>
+              <option *ngFor="let type of availableDeviceTypes" [value]="type">
+                {{ type | titlecase }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-info-circle"></i> Current Type</label>
+            <input
+              type="text"
+              [(ngModel)]="deviceTypeFormData.current_type"
+              readonly
+              class="readonly-input"
+              placeholder="Will show current type when device is selected"
+            />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-building"></i> New Vendor</label>
+            <select
+              [(ngModel)]="deviceTypeFormData.new_vendor"
+              class="block-select"
+            >
+              <option value="">-- Select Vendor --</option>
+              <option *ngFor="let vendor of availableVendors" [value]="vendor">
+                {{ vendor }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-cube"></i> Current Block</label>
+            <input
+              type="text"
+              [(ngModel)]="deviceTypeFormData.current_block"
+              readonly
+              class="readonly-input"
+              placeholder="Will show current block when device is selected"
+            />
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-building"></i> Current Vendor</label>
+            <input
+              type="text"
+              [(ngModel)]="deviceTypeFormData.current_vendor"
+              readonly
+              class="readonly-input"
+              placeholder="Will show current vendor when device is selected"
+            />
+          </div>
+        </div>
+
+        <div class="form-info">
+          <i class="fa-solid fa-info-circle"></i>
+          <span
+            >This will update the device type and vendor for all records where
+            this device appears on the selected side (Device A or Device B).
+            Vendor update is optional.</span
+          >
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          class="btn btn-primary"
+          (click)="updateDeviceType()"
+          [disabled]="isLoading"
+        >
+          <i class="fa-solid fa-save"></i>
+          {{ isLoading ? "Updating..." : "Update Device Type & Vendor" }}
+        </button>
+        <button class="btn btn-cancel" (click)="cancelDeviceTypeForm()">
+          <i class="fa-solid fa-xmark"></i>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Blocks Management Modal -->
+  <div class="modal" *ngIf="showBlocksModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>
+          <i class="fa-solid fa-cube"></i>
+          Blocks Management
+        </h3>
+        <button class="btn btn-close" (click)="closeBlocksModal()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="blocks-info">
+          <p>
+            Manage network topology blocks. Add new blocks, edit block names or
+            delete unused blocks.
+          </p>
+        </div>
+
+        <!-- Add New Block Form -->
+        <div class="add-block-form" *ngIf="showAddBlockFormFlag">
+          <div class="form-group">
+            <label><i class="fa-solid fa-cube"></i> Block Name</label>
+            <div class="input-group">
+              <input
+                type="text"
+                [(ngModel)]="newBlockName"
+                placeholder="Enter block name (e.g., core-block)"
+                class="block-name-input"
+                (keyup.enter)="addNewBlock()"
+              />
+              <button
+                class="btn btn-save-small"
+                (click)="addNewBlock()"
+                [disabled]="isLoading"
+                title="Add block"
+              >
+                <i class="fa-solid fa-plus"></i>
+              </button>
+              <button
+                class="btn btn-cancel-small"
+                (click)="cancelAddBlock()"
+                title="Cancel"
+              >
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add New Block Button -->
+        <div class="add-block-button" *ngIf="!showAddBlockFormFlag">
+          <button
+            class="btn btn-add-block"
+            (click)="showAddBlockForm()"
+            [disabled]="isLoading"
+          >
+            <i class="fa-solid fa-plus"></i>
+            Add New Block
+          </button>
+        </div>
+
+        <!-- Loading indicator -->
+        <div class="loading-section" *ngIf="isLoading">
+          <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Loading blocks...</span>
+          </div>
+        </div>
+
+        <!-- Blocks list -->
+        <div class="blocks-list" *ngIf="!isLoading && blocksList.length > 0">
+          <div class="block-item" *ngFor="let block of blocksList">
+            <div class="block-info">
+              <div class="block-id">ID: {{ block.ID }}</div>
+              <div class="block-name-container">
+                <input
+                  *ngIf="editingBlockId === block.ID"
+                  type="text"
+                  [(ngModel)]="editingBlockName"
+                  class="block-name-input"
+                  placeholder="Enter block name"
+                />
+                <span *ngIf="editingBlockId !== block.ID" class="block-name">{{
+                  block.BLOCK_NAME
+                }}</span>
+              </div>
+            </div>
+            <div class="block-actions">
+              <button
+                *ngIf="editingBlockId === block.ID"
+                class="btn btn-save-small"
+                (click)="saveBlockEdit()"
+                title="Save changes"
+              >
+                <i class="fa-solid fa-check"></i>
+              </button>
+              <button
+                *ngIf="editingBlockId === block.ID"
+                class="btn btn-cancel-small"
+                (click)="cancelEditingBlock()"
+                title="Cancel editing"
+              >
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+              <button
+                *ngIf="editingBlockId !== block.ID"
+                class="btn btn-edit-small"
+                (click)="startEditingBlock(block)"
+                title="Edit block name"
+              >
+                <i class="fa-solid fa-pen-to-square"></i>
+              </button>
+              <button
+                *ngIf="editingBlockId !== block.ID"
+                class="btn btn-delete-small"
+                (click)="confirmDeleteBlock(block)"
+                title="Delete block"
+              >
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- No blocks message -->
+        <div class="no-blocks" *ngIf="!isLoading && blocksList.length === 0">
+          <i class="fa-solid fa-cube"></i>
+          <h4>No Blocks Found</h4>
+          <p>There are no network topology blocks available.</p>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary" (click)="closeBlocksModal()">
+          <i class="fa-solid fa-check"></i>
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Block Confirmation Modal -->
+  <div class="modal delete-modal" *ngIf="showDeleteBlockConfirm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          Confirm Block Deletion
+        </h3>
+        <button class="btn btn-close" (click)="cancelDeleteBlock()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="delete-message">
+          <i class="fa-solid fa-trash-can"></i>
+          <p>Are you sure you want to delete this block?</p>
+          <div class="delete-preview" *ngIf="deletingBlock">
+            <strong>Block ID:</strong> {{ deletingBlock.ID }}<br />
+            <strong>Block Name:</strong> {{ deletingBlock.BLOCK_NAME }}
+          </div>
+          <div class="warning-message">
+            <i class="fa-solid fa-exclamation-triangle"></i>
+            <span
+              >This action cannot be undone. Make sure this block is not
+              assigned to any devices.</span
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          class="btn btn-delete-confirm"
+          (click)="deleteBlock()"
+          [disabled]="isLoading"
+        >
+          <i class="fa-solid fa-trash-can"></i>
+          {{ isLoading ? "Deleting..." : "Delete Block" }}
+        </button>
+        <button class="btn btn-cancel" (click)="cancelDeleteBlock()">
+          <i class="fa-solid fa-xmark"></i>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Multi-Row Delete Confirmation Modal Overlay -->
+  <div
+    class="modal-overlay"
+    *ngIf="showMultiRowDeleteModal"
+    (click)="cancelMultiRowDelete()"
+  ></div>
+
+  <!-- Multi-Row Delete Confirmation Modal -->
+  <div class="modal delete-modal" *ngIf="showMultiRowDeleteModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          Confirm Multi-Row Delete
+        </h3>
+        <button class="btn btn-close" (click)="cancelMultiRowDelete()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="delete-message">
+          <i class="fa-solid fa-trash-can"></i>
+          <p>
+            Are you sure you want to delete
+            {{ getSelectedRows().length }} selected record(s)?
+          </p>
+          <div class="delete-preview">
+            <strong>Selected Records:</strong>
+            <ul style="margin-top: 10px; max-height: 200px; overflow-y: auto">
+              <li *ngFor="let selectedRow of getSelectedRowsForPreview()">
+                ID {{ selectedRow.id }}: {{ selectedRow.device_a_hostname }} ({{
+                  selectedRow.device_a_ip
+                }}) ↔ {{ selectedRow.device_b_hostname }} ({{
+                  selectedRow.device_b_ip
+                }})
+              </li>
+            </ul>
+          </div>
+          <div class="warning-message">
+            <i class="fa-solid fa-exclamation-triangle"></i>
+            <span>This action cannot be undone.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          class="btn btn-delete-confirm"
+          (click)="confirmMultiRowDelete()"
+          [disabled]="isLoading"
+        >
+          <i class="fa-solid fa-trash-can"></i>
+          {{
+            isLoading
+              ? "Deleting..."
+              : "Delete " + getSelectedRows().length + " Records"
+          }}
+        </button>
+        <button class="btn btn-cancel" (click)="cancelMultiRowDelete()">
+          <i class="fa-solid fa-xmark"></i>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-section" *ngIf="hasData()">
+    <!-- No Results Message -->
+    <div
+      class="no-results"
+      *ngIf="searchTerm && getFilteredData().length === 0"
+    >
+      <i class="fa-solid fa-search"></i>
+      <h3>No Results Found</h3>
+      <p>No records match your search criteria: "{{ searchTerm }}"</p>
+      <button class="btn btn-secondary" (click)="clearSearch()">
+        <i class="fa-solid fa-xmark"></i>
+        Clear Search
+      </button>
+    </div>
+
+    <!-- Table with Data -->
+    <div class="table-container" *ngIf="getFilteredData().length > 0">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th width="50px">
+              <input
+                type="checkbox"
+                [checked]="areAllSelected()"
+                [indeterminate]="isSomeSelected()"
+                (change)="toggleAllSelection()"
+                title="Select/Deselect All"
+              />
+            </th>
+            <th width="320px">Actions</th>
+            <th>#</th>
+            <th *ngFor="let column of columns" [style.width]="column.width">
+              {{ column.label }}
+            </th>
+            <th width="150px">Block Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let row of getFilteredData(); let i = index"
+            class="data-row"
+            [ngClass]="getBlockStatusClass(row)"
+          >
+            <td class="checkbox-cell">
+              <input
+                type="checkbox"
+                [checked]="isRowSelected(row.id)"
+                (change)="toggleRowSelection(row.id)"
+                [disabled]="!row.id"
+              />
+            </td>
+            <td class="action-cell">
+              <button
+                class="btn btn-edit"
+                (click)="editRecord(excelData.indexOf(row))"
+                title="Edit"
+              >
+                <i class="fa-solid fa-pen-to-square"></i>
+              </button>
+              <button
+                class="btn btn-delete"
+                (click)="showDeleteConfirmModal(excelData.indexOf(row))"
+                title="Delete"
+              >
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+              <button
+                class="btn btn-secondary"
+                (click)="editDeviceTypeFromTable(row)"
+                title="Update Device Type"
+              >
+                <i class="fa-solid fa-tag"></i>
+              </button>
+              <button
+                class="btn btn-delete"
+                (click)="openBulkDeleteModal(excelData.indexOf(row))"
+                title="Bulk delete by this device (host/IP)"
+              >
+                <i class="fa-solid fa-broom"></i>
+              </button>
+            </td>
+            <td class="row-number">{{ i + 1 }}</td>
+            <td
+              *ngFor="let column of columns"
+              class="data-cell"
+              [title]="row[column.key]"
+            >
+              {{ row[column.key] || "-" }}
+            </td>
+            <td class="block-status-cell" [ngClass]="getBlockStatusClass(row)">
+              {{ getBlockStatus(row) }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <!-- <div class="empty-state" *ngIf="!hasData() && !isLoading && !errorMessage">
+    <div class="empty-card">
+      <i class="fas fa-table"></i>
+      <h3>No Data Available</h3>
+      <p>Please select an Excel file to import and view network device data</p>
+      <div class="import-action">
+        <button
+          class="btn btn-import btn-large"
+          (click)="showExcelImportSection()"
+        >
+          <i class="fa-solid fa-file-excel"></i>
+          Import Excel File
+        </button>
+      </div>
+      <div class="expected-format">
+        <h4>Expected Excel Format:</h4>
+        <div class="format-columns">
+          <div class="format-column" *ngFor="let column of columns">
+            {{ column.label }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div> -->
+</div>

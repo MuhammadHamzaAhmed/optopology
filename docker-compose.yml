@@ -1,0 +1,183 @@
+# services:
+
+  # mysql:
+  #   image: mysql:8.0
+  #   container_name: topology_mysql
+  #   restart: unless-stopped
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: rootpassword
+  #     MYSQL_DATABASE: mydb
+  #     MYSQL_USER: topology_user
+  #     MYSQL_PASSWORD: topology_pass
+  #     MYSQL_ROOT_HOST: '%'
+  #   ports:
+  #     - "3306:3306"
+  #   volumes:
+  #     - mysql_data:/var/lib/mysql
+  #     - ./backend/init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql
+  #     - ./backend/init-permissions.sql:/docker-entrypoint-initdb.d/02-init-permissions.sql
+  #   networks:
+  #     - arbNetwork
+  #   command: --default-authentication-plugin=mysql_native_password --bind-address=0.0.0.0 --skip-name-resolve
+  #   healthcheck:
+  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "topology_user", "-ptopology_pass"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 30s
+
+# #   backend:
+# #     build: ./backend
+# #     container_name: flask_topology_api
+# #     restart: unless-stopped
+# #     environment:
+# #       FLASK_ENV: production
+# #       # Database configuration for topology.py
+# #       SQL_SERVER: mysql
+# #       SQL_DATABASE: mydb
+# #       SQL_USER: topology_user
+# #       SQL_PASSWORD: topology_pass
+# #       # Also set the environment variables used by health check
+# #       DB_SERVER: mysql
+# #       DB_PORT: 3306
+# #       DB_NAME: mydb
+# #       DB_USER: topology_user
+# #       DB_PWD: topology_pass
+# #       # Set DATABASE_URL for SQLAlchemy
+# #       DATABASE_URL: mysql+pymysql://topology_user:topology_pass@mysql:3306/mydb
+# #     networks:
+# #       - arbNetwork
+# #     ports:
+# #       - "3006:5000"  # Flask API on port 3006
+# #     depends_on:
+# #       mysql:
+# #         condition: service_healthy
+# #     healthcheck:
+# #       test: ["CMD", "python", "test_db_connection.py"]
+# #       interval: 30s
+# #       timeout: 10s
+# #       retries: 3
+# #       start_period: 60s
+
+#   frontend:
+#     build:
+#       context: ./frontend
+#       args:
+#         API_BASE: /api
+#     container_name: angular_nginx
+#     restart: unless-stopped
+#     depends_on:
+#       backend:
+#         condition: service_healthy
+#     ports:
+#       - "3007:80"  # Frontend on port 3007
+#     networks:
+#       - arbNetwork
+
+# networks:
+#   arbNetwork:
+#     driver: bridge
+#     ipam:
+#       config:
+#         - subnet: 172.20.0.0/16
+
+# # volumes:
+# #   mysql_data:
+
+
+
+#   optopology:
+#     image: cisco/python_custom:v1.0
+#     # depends_on:
+#     #   mysql:
+#     #     condition: service_healthy
+#     restart: always
+#     working_dir: /usr/src/app
+#     environment: 
+#       - TZ=Asia/Riyadh
+#     privileged: true
+#     ports:
+#       - "0.0.0.0:5017:5017"
+#     # networks:
+#     #   arbNetwork:
+#     #     ipv4_address: 172.20.0.10
+#     volumes:
+#       - ./optopology/src:/usr/src/app:Z
+#       - ./optopology/logs:/usr/src/applogs:Z
+
+
+services:
+
+
+  mysql:
+    image: mcr.microsoft.com/mssql/server:2017-latest
+    restart: always
+    environment:
+      - SA_PASSWORD=AQ39!swq
+      - ACCEPT_EULA=Y
+      - TZ=Asia/Riyadh
+    ports:
+      - "0.0.0.0:5433:1433"
+    healthcheck:
+      test: "exit 0"
+    networks:
+      arbNetwork:
+        ipv4_address: 192.168.10.19
+    # volumes:
+    #   #- C:\Users\Admin\Desktop\ITOP\itop-application\mssql\opt\mssql:/var/opt/mssql/:Z
+    #   - sql_data_volume:/var/opt/mssql
+    #   - C:\Users\Admin\Desktop\ITOP\itop-application\mssql\opt\mysql\data:/var/opt/sqlserver/data:Z
+    #   - C:\Users\Admin\Desktop\ITOP\itop-application\mssql\opt\mysql\sqllog:/var/opt/sqlserver/log:Z
+    #   - C:\Users\Admin\Desktop\ITOP\itop-application\mssql\opt\mysql\sqlbackup:/var/opt/sqlserver/backup:Z 
+
+
+
+
+
+  optopology:
+    image: cisco/python_custom:v1.0
+    container_name: optopology
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: always
+    working_dir: /usr/src/app
+    environment:
+      - TZ=Asia/Riyadh
+    privileged: true
+    ports:
+      - "0.0.0.0:5017:5017"
+    networks:
+      arbNetwork:
+        ipv4_address: 192.168.10.10
+    volumes:
+      - ./optopology/src:/usr/src/app:Z
+      - ./optopology/logs:/usr/src/applogs:Z
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request,sys; sys.exit(0) if urllib.request.urlopen(\"http://127.0.0.1:5017/topology-api/health-check\", timeout=2).getcode()==200 else sys.exit(1)'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        API_BASE: /api
+    container_name: angular_nginx
+    restart: unless-stopped
+    depends_on:
+      optopology:
+        condition: service_healthy
+    ports:
+      - "3007:80"  # Frontend on port 3007
+    networks:
+      - arbNetwork
+
+
+networks:
+  arbNetwork:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.10.0/24

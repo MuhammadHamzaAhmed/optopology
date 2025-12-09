@@ -1,0 +1,20 @@
+/* You can add global styles to this file, and also import other style files */
+
+/* Enterprise-level font family for the entire application */
+* {
+  font-family: 'Segoe UI', 'Roboto', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  font-smooth: always;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+  background-color: #121212;
+  color: #f0f0f0;
+  font-family: 'Segoe UI', 'Roboto', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.navbar {
+  background-color: #1f1f1f;
+}
