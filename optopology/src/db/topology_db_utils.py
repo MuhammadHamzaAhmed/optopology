@@ -11,7 +11,6 @@ import sys
 
 class TopologyDBUtils:
     def __init__(self):
-        """Initialize MongoDB connection using pymongo."""
         print(f"Connecting to MongoDB at {mongo_host}:{mongo_port}", file=sys.stderr)
         try:
             connection_string = f"mongodb://{mongo_user}:{mongo_password}@{mongo_host}:{mongo_port}/?authSource=admin"
@@ -20,10 +19,8 @@ class TopologyDBUtils:
             self.dashboard_collection = self.db[topology_dashboard_collection]
             self.block_collection = self.db[topology_block_collection]
 
-            # Create indexes for better query performance
             self._create_indexes()
 
-            # Test connection
             self.client.admin.command('ping')
             print(f"Successfully connected to MongoDB database: {mongo_db}", file=sys.stderr)
         except Exception as e:
@@ -31,9 +28,7 @@ class TopologyDBUtils:
             raise e
 
     def _create_indexes(self):
-        """Create indexes for optimal query performance."""
         try:
-            # Indexes for dashboard collection
             self.dashboard_collection.create_index([("device_a_hostname", 1), ("device_a_interface", 1)])
             self.dashboard_collection.create_index([("device_b_hostname", 1), ("device_b_interface", 1)])
             self.dashboard_collection.create_index([("device_a_ip", 1)])
@@ -42,31 +37,24 @@ class TopologyDBUtils:
             self.dashboard_collection.create_index([("device_b_block", 1)])
             self.dashboard_collection.create_index([("created_date", -1)])
 
-            # Index for block collection
             self.block_collection.create_index([("block_name", 1)], unique=True)
             self.block_collection.create_index([("created_date", -1)])
         except Exception as e:
             print(f"Warning: Could not create indexes: {str(e)}", file=sys.stderr)
 
     def _str_to_objectid(self, id_str):
-        """Convert string ID to ObjectId, return None if invalid."""
         try:
             return ObjectId(id_str)
         except:
             return None
 
     def handleKeyError(self, body, key):
-        """Gracefully handle missing keys."""
         try:
             return body[key]
         except KeyError:
             return ''
 
     def check_duplicate_connection(self, record):
-        """
-        Check for duplicate connections based on hostname+interface pairs.
-        Only considers duplicates when BOTH ends match exactly (including all fields).
-        """
         try:
             da_host = str(record['device_a_hostname']).strip()
             da_intf = str(record['device_a_interface']).strip()
@@ -80,7 +68,6 @@ class TopologyDBUtils:
             bv = str(record.get('device_b_vendor', '')).lower().strip()
             cm = str(record.get('comments', '')).strip()
 
-            # Check direct order (A->B)
             direct_query = {
                 "device_a_hostname": da_host,
                 "device_a_interface": da_intf,
@@ -96,7 +83,6 @@ class TopologyDBUtils:
             }
             direct_count = self.dashboard_collection.count_documents(direct_query)
 
-            # Check swapped order (B->A)
             swapped_query = {
                 "device_a_hostname": db_host,
                 "device_a_interface": db_intf,
@@ -129,12 +115,7 @@ class TopologyDBUtils:
             return {'is_duplicate': False, 'error': str(e)}
 
     def insert_dashboard_connection(self, record):
-        """
-        Insert a single connection record into dashboard collection.
-        Skips insertion if an exact duplicate (A->B or B->A) already exists.
-        """
         try:
-            # Normalize inputs (trim spaces, lowercase where needed)
             da_ip = str(record.get('device_a_ip', '')).strip()
             da_host = str(record.get('device_a_hostname', '')).strip()
             da_intf = str(record.get('device_a_interface', '')).strip()
@@ -149,13 +130,11 @@ class TopologyDBUtils:
 
             comments = str(record.get('comments', '')).strip()
 
-            # Debug logging
             print("DEBUG: Checking values for duplicate:")
             print(f"  Device A -> {da_host}/{da_intf}, IP={da_ip}, Type={da_type}, Vendor={da_vendor}")
             print(f"  Device B -> {db_host}/{db_intf}, IP={db_ip}, Type={db_type}, Vendor={db_vendor}")
             print(f"  Comments : {comments}")
 
-            # Direct duplicate check (A -> B)
             direct_query = {
                 "device_a_hostname": da_host,
                 "device_a_interface": da_intf,
@@ -171,7 +150,6 @@ class TopologyDBUtils:
             }
             direct_count = self.dashboard_collection.count_documents(direct_query)
 
-            # Reverse duplicate check (B -> A)
             reverse_query = {
                 "device_a_hostname": db_host,
                 "device_a_interface": db_intf,
@@ -196,11 +174,9 @@ class TopologyDBUtils:
                     'inserted_count': 0
                 }
 
-            # Insert new record
             print("DEBUG: No duplicate found -> Inserting new record")
             current_time = datetime.now()
 
-            # Get position values from record (may be set by auto-layout)
             device_a_pos_x = record.get('device_a_position_x')
             device_a_pos_y = record.get('device_a_position_y')
             device_b_pos_x = record.get('device_b_position_x')
@@ -254,9 +230,6 @@ class TopologyDBUtils:
             }
 
     def update_dashboard_connection(self, record):
-        """
-        Update an existing connection record in dashboard collection.
-        """
         try:
             record_id = self._str_to_objectid(record['record_id'])
             if not record_id:
@@ -300,9 +273,6 @@ class TopologyDBUtils:
             return {'status': 'Failed', 'error': str(e)}
 
     def delete_dashboard_connection(self, record_id, updated_by):
-        """
-        Delete a connection record from dashboard collection.
-        """
         try:
             obj_id = self._str_to_objectid(record_id)
             if not obj_id:
@@ -327,9 +297,6 @@ class TopologyDBUtils:
             return {'status': 'Failed', 'error': str(e)}
 
     def get_dashboard_connections(self, search=''):
-        """
-        Retrieve all connection records from dashboard collection with optional search.
-        """
         try:
             query = {}
 
@@ -381,20 +348,14 @@ class TopologyDBUtils:
             return {'status': 'Failed', 'error': str(e)}
 
     def update_device_type(self, device_ip, device_hostname, new_device_type, updated_by):
-        """
-        Update device type by IP and hostname.
-        Searches both Device A and Device B columns and updates the type.
-        """
         try:
             current_time = datetime.now()
 
-            # Update device type in Device A fields
             result_a = self.dashboard_collection.update_many(
                 {"device_a_ip": device_ip, "device_a_hostname": device_hostname},
                 {"$set": {"device_a_type": new_device_type, "updated_by": updated_by, "updated_date": current_time}}
             )
 
-            # Update device type in Device B fields
             result_b = self.dashboard_collection.update_many(
                 {"device_b_ip": device_ip, "device_b_hostname": device_hostname},
                 {"$set": {"device_b_type": new_device_type, "updated_by": updated_by, "updated_date": current_time}}
@@ -419,9 +380,6 @@ class TopologyDBUtils:
             return {'status': 'Failed', 'error': str(e)}
 
     def save_device_positions_bulk(self, positions, changed_by):
-        """
-        Save device and block positions in bulk.
-        """
         try:
             current_time = datetime.now()
 
@@ -433,7 +391,6 @@ class TopologyDBUtils:
             topology_utils = TopologyUtilities()
 
             def clean_key(k):
-                """Clean key - treat '-', 'null', 'None', etc. as empty"""
                 if k is None:
                     return ''
                 cleaned = str(k).strip()
@@ -458,7 +415,6 @@ class TopologyDBUtils:
 
                 total_rows_for_key = 0
 
-                # Strategy 1: Try to update by IP address
                 if topology_utils.is_ipv4(key):
                     result_a = self.dashboard_collection.update_many(
                         {"device_a_ip": key},
@@ -475,7 +431,6 @@ class TopologyDBUtils:
                     total_rows_for_key = result_a.modified_count + result_b.modified_count
                     device_updates += total_rows_for_key
 
-                # Strategy 2: Try to update by hostname (for devices without IPs)
                 if total_rows_for_key == 0 and not topology_utils.is_ipv4(key):
                     result_a = self.dashboard_collection.update_many(
                         {"device_a_hostname": key, "$or": [{"device_a_ip": None}, {"device_a_ip": ""}]},
@@ -493,7 +448,6 @@ class TopologyDBUtils:
                     total_rows_for_key += hostname_rows
                     device_updates += hostname_rows
 
-                # Strategy 3: Try to update block positions
                 if total_rows_for_key == 0:
                     result_ba = self.dashboard_collection.update_many(
                         {"device_a_block": key},
@@ -533,9 +487,6 @@ class TopologyDBUtils:
             return {'status': 'Failed', 'error': str(e)}
 
     def insert_dashboard_connections_bulk(self, records):
-        """
-        Insert multiple connection records into dashboard collection.
-        """
         try:
             inserted_count = 0
             errors = []
@@ -543,7 +494,6 @@ class TopologyDBUtils:
 
             for idx, record in enumerate(records):
                 try:
-                    # Validate required fields
                     required_fields = [
                         'device_a_ip', 'device_a_hostname', 'device_a_interface',
                         'device_b_hostname'
@@ -608,16 +558,11 @@ class TopologyDBUtils:
             return {'status': 'Failed', 'error': str(e)}
 
     def get_network_topology_dashboard_data(self):
-        """
-        Retrieve network topology data from dashboard collection.
-        Returns connection records for processing.
-        """
         try:
             cursor = self.dashboard_collection.find().sort("created_date", -1)
 
             connection_rows = []
             for doc in cursor:
-                # Return tuple format similar to SQL cursor for compatibility
                 connection_rows.append((
                     doc.get('device_a_ip', ''),
                     doc.get('device_a_hostname', ''),
@@ -655,9 +600,6 @@ class TopologyDBUtils:
             return {'status': 'Failed', 'error': str(e)}
 
     def get_network_topology_blocks(self):
-        """
-        Get all network topology blocks from the database.
-        """
         try:
             cursor = self.block_collection.find().sort("created_date", -1)
 
@@ -677,9 +619,6 @@ class TopologyDBUtils:
             return {'status': 'Failed', 'error': str(e)}
 
     def insert_network_topology_block(self, data, created_by, updated_by):
-        """
-        Insert a network topology block into block collection.
-        """
         try:
             current_time = datetime.now()
             document = {
@@ -702,10 +641,6 @@ class TopologyDBUtils:
             return {'status': 'Failed', 'error': str(e)}
 
     def update_network_topology_block(self, data):
-        """
-        Update a network topology block in block collection.
-        Also updates references to the old block name in dashboard collection.
-        """
         try:
             current_time = datetime.now()
             block_id = self._str_to_objectid(data['block_id'])
@@ -713,7 +648,6 @@ class TopologyDBUtils:
             if not block_id:
                 return {'status': 'Failed', 'error': 'Invalid block ID'}
 
-            # Get the old block name
             old_block = self.block_collection.find_one({"_id": block_id})
 
             if not old_block:
@@ -722,13 +656,11 @@ class TopologyDBUtils:
             old_block_name = old_block.get('block_name', '')
             new_block_name = data['block_name']
 
-            # Update the block name in block collection
             self.block_collection.update_one(
                 {"_id": block_id},
                 {"$set": {"block_name": new_block_name, "updated_date": current_time, "updated_by": data['updated_by']}}
             )
 
-            # Update references in dashboard collection
             self.dashboard_collection.update_many(
                 {"device_a_block": old_block_name},
                 {"$set": {"device_a_block": new_block_name, "updated_date": current_time, "updated_by": data['updated_by']}}
@@ -751,10 +683,6 @@ class TopologyDBUtils:
             return {'status': 'Failed', 'error': str(e)}
 
     def delete_network_topology_block(self, data):
-        """
-        Delete a network topology block from block collection.
-        Prevents deletion if the block is assigned to any device.
-        """
         try:
             block_id = self._str_to_objectid(data['block_id'])
 
@@ -768,7 +696,6 @@ class TopologyDBUtils:
 
             block_name = block.get('block_name', '')
 
-            # Check if block is in use
             usage_count = self.dashboard_collection.count_documents({
                 "$or": [
                     {"device_a_block": block_name},
@@ -796,9 +723,6 @@ class TopologyDBUtils:
 
 
     def delete_network_topology_bulk_by_ids(self, record_ids, updated_by):
-        """
-        Delete multiple network topology records by their IDs.
-        """
         try:
             if not record_ids or len(record_ids) == 0:
                 return {
@@ -807,7 +731,6 @@ class TopologyDBUtils:
                     'deleted_count': 0
                 }
 
-            # Convert string IDs to ObjectIds
             object_ids = [self._str_to_objectid(rid) for rid in record_ids if self._str_to_objectid(rid)]
 
             if not object_ids:
@@ -831,9 +754,6 @@ class TopologyDBUtils:
             return {'status': 'Failed', 'error': str(e)}
 
     def delete_network_topology_bulk(self, hostname, ip, updated_by):
-        """
-        Delete all rows where the given (hostname, ip) pair appears on either device side.
-        """
         try:
             hostname = hostname.strip() if hostname else ''
             ip = ip.strip() if ip else ''
@@ -858,9 +778,6 @@ class TopologyDBUtils:
             return {'status': 'Failed', 'error': str(e)}
 
     def delete_all_topology_table_records(self, updated_by):
-        """
-        Delete all records from dashboard collection.
-        """
         try:
             result = self.dashboard_collection.delete_many({})
             return {
@@ -873,10 +790,6 @@ class TopologyDBUtils:
             return {'status': 'Failed', 'error': str(e)}
 
     def insert_network_topology_blocks_bulk(self, data, created_by):
-        """
-        Insert multiple network topology blocks into block collection.
-        Only inserts blocks that don't already exist.
-        """
         try:
             current_time = datetime.now()
 
@@ -888,7 +801,6 @@ class TopologyDBUtils:
             for record in data:
                 block_name = record['block_name']
 
-                # Check if block already exists
                 existing_block = self.block_collection.find_one({"block_name": block_name})
 
                 if existing_block:

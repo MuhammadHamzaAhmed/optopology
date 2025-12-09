@@ -19,34 +19,21 @@ class TopologyApp:
         }
 
     def _get_request_user(self):
-        """Return allowed user name from X-Forwarded-For or None if not allowed."""
         ip_address = str(request.headers.get('X-Forwarded-For', '')).strip()
         if ',' in ip_address:
             ip_address = ip_address.split(',')[0].strip()
         return self.allowed_users.get(ip_address)
 
     def _enforce_allowed(self, action_label: str):
-        """Ensure requester is allowed. Returns (user_name, None) or (None, error_response)."""
-        # Temporarily bypassing authorization check
         return "System User", None
-        
-        # Original authorization logic (commented out for bypass)
-        # user_name = self._get_request_user()
-        # if not user_name:
-        #     logger.warning(f"Unauthorized {action_label} from request")
-        #     return None, {
-        #         'success': False,
-        #         'message': 'you are not allowed'
-        #     }
-        # return user_name, None
-    
+
     def permission_check(self):
         _, error = self._enforce_allowed('user')
         if error:
             return {"permission":True}
         else:
             return {"permission":True}
-    
+
     def import_connections(self, data):
         return {
             'success': False,
@@ -54,10 +41,6 @@ class TopologyApp:
         }
 
     def import_excel_headered(self, data):
-        """
-        Process Excel header-based data and insert into Dashboard table.
-        Handles flexible header naming, deduplication logic, and auto-layout positioning.
-        """
         inserted_count = 0
         skipped = []
         errors = []
@@ -69,7 +52,6 @@ class TopologyApp:
         if error:
             return error
 
-        # Phase 1: Extract and validate all records first
         valid_records = []
         for idx, raw_row in enumerate(data, start=1):
             try:
@@ -78,20 +60,17 @@ class TopologyApp:
                     logger.warning(f"Skipping row {idx}: not an object")
                     continue
 
-                # Extract record using header mapping
                 record = self.topology_utils.extract_headered_record(raw_row)
                 record['created_by'] = created_by
                 record['updated_by'] = created_by
-                record['_original_index'] = idx  # Track original row index
+                record['_original_index'] = idx
 
-                # Validate required fields
                 validation_errors = self.topology_utils.validate_headered_record(record, idx)
                 if validation_errors:
                     skipped.append({'index': idx, 'reason': validation_errors[0]})
                     logger.warning(f"Skipping row {idx}: {validation_errors[0]}")
                     continue
 
-                # Check for duplicates
                 dup_result = self.db_utils.check_duplicate_connection(record)
                 if dup_result['is_duplicate']:
                     reason = dup_result['reason']
@@ -99,7 +78,6 @@ class TopologyApp:
                     logger.info(f"Skipping row {idx}: {reason}")
                     continue
 
-                # Auto-assign blocks if missing
                 if not record.get('device_a_block'):
                     record['device_a_block'] = self.topology_utils.determine_block(
                         record['device_a_hostname'],
@@ -120,14 +98,12 @@ class TopologyApp:
                 errors.append(msg)
                 logger.error(msg)
 
-        # Phase 2: Calculate auto-layout positions for all valid records
         if valid_records:
             logger.info(f"Calculating auto-layout positions for {len(valid_records)} records")
             layout_result = self.topology_utils.calculate_auto_layout_positions(valid_records)
             device_positions = layout_result['device_positions']
             block_positions = layout_result['block_positions']
 
-            # Apply calculated positions to records
             for record in valid_records:
                 device_a_id = self.topology_utils.compute_device_id(
                     record.get('device_a_ip', ''),
@@ -138,19 +114,16 @@ class TopologyApp:
                     record.get('device_b_hostname', '')
                 )
 
-                # Set device A position
                 if device_a_id and device_a_id in device_positions:
                     pos = device_positions[device_a_id]
                     record['device_a_position_x'] = pos['x']
                     record['device_a_position_y'] = pos['y']
 
-                # Set device B position
                 if device_b_id and device_b_id in device_positions:
                     pos = device_positions[device_b_id]
                     record['device_b_position_x'] = pos['x']
                     record['device_b_position_y'] = pos['y']
 
-                # Set block positions
                 device_a_block = (record.get('device_a_block') or '').strip()
                 device_b_block = (record.get('device_b_block') or '').strip()
 
@@ -164,7 +137,6 @@ class TopologyApp:
                     record['device_b_block_position_x'] = block_pos['x']
                     record['device_b_block_position_y'] = block_pos['y']
 
-        # Phase 3: Insert all records with calculated positions
         for record in valid_records:
             idx = record.pop('_original_index', 0)
             try:
@@ -196,7 +168,7 @@ class TopologyApp:
 
         logger.info(f"Excel headered import completed. Inserted: {inserted_count}, Skipped: {len(skipped)}, Errors: {len(errors)}")
         return summary
-    
+
     def update_device_position(self, data):
         return {
             'success': False,
@@ -216,33 +188,25 @@ class TopologyApp:
         }
 
     def get_network_topology_dashboard(self):
-        """
-        Retrieve network topology data from Dashboard table formatted for Angular topology visualization component.
-        Only returns devices and connections that have block assignments.
-        """
         logger.debug(f"Starting network topology dashboard retrieval operation at {datetime.now()}")
-        
-        # _, error = self._enforce_allowed('access to dashboard topology')
-        # if error:
-        #     return error
-        
+
         try:
             dashboard_data = self.db_utils.get_network_topology_dashboard_data()
-            
+
             if dashboard_data['status'] != 'Success':
                 return {
                     'success': False,
                     'message': dashboard_data['error']
                 }
-            
+
             logger.debug(f"Dashboard data count: {len(dashboard_data['connections'])} connections at {datetime.now()}")
-            
+
             processed_data = self.topology_utils.process_dashboard_topology_data(
                 dashboard_data['connections']
             )
-            
+
             logger.info(f"Dashboard topology processing: {len(dashboard_data['connections'])} total records, {len(processed_data['networkData']['nodes'])} devices with blocks, {len(processed_data['networkData']['edges'])} connections with blocks at {datetime.now()}")
-            
+
             return {
                 'success': True,
                 'data': processed_data,
@@ -252,7 +216,7 @@ class TopologyApp:
                     'edges': len(processed_data['networkData']['edges'])
                 }
             }
-            
+
         except Exception as e:
             logger.error(f"Get network topology dashboard error: {str(e)}")
             return {
@@ -261,14 +225,10 @@ class TopologyApp:
             }
 
     def add_network_topology_record(self, data):
-        """
-        Add a single network topology record to the Dashboard table.
-        Used by the Excel table component for adding new records via form.
-        """
         logger.debug("Starting single network topology record add operation")
         created_name, error = self._enforce_allowed('add_network_topology_record')
         if error:
-            return error  
+            return error
         validation_errors = self.topology_utils.validate_topology_record(data)
         if validation_errors:
             return {
@@ -277,17 +237,17 @@ class TopologyApp:
             }
 
         logger.debug(f"Inserting single record: A[{data['device_a_hostname']}/{data['device_a_interface']}] -> B[{data['device_b_hostname']}/{data['device_b_interface']}]")
-     
+
         if not data.get('device_a_block'):
             data['device_a_block'] = self.topology_utils.determine_block(
-                data['device_a_hostname'], 
-                data['device_a_ip'], 
+                data['device_a_hostname'],
+                data['device_a_ip'],
                 data.get('device_a_type', 'unknown')
             )
         if not data.get('device_b_block'):
             data['device_b_block'] = self.topology_utils.determine_block(
-                data['device_b_hostname'], 
-                data['device_b_ip'], 
+                data['device_b_hostname'],
+                data['device_b_ip'],
                 data.get('device_b_type', 'unknown')
             )
 
@@ -295,9 +255,8 @@ class TopologyApp:
         data['created_by'] = created_name
         data['updated_by'] = created_name
 
-        # Insert record into database
         result = self.db_utils.insert_dashboard_connection(data)
-        
+
         if result['status'] == 'Success':
             logger.info(f"Network topology record added successfully: ID {result.get('record_id', 'unknown')}")
             return {
@@ -314,10 +273,6 @@ class TopologyApp:
             }
 
     def add_network_topology_records_bulk(self, data):
-        """
-        Add multiple network topology records to the Dashboard table in a single operation.
-        Used by the Excel table component for bulk import operations.
-        """
         logger.debug("Starting bulk network topology records add operation")
         created_name, error = self._enforce_allowed('add_network_topology_records_bulk')
         if error:
@@ -327,7 +282,7 @@ class TopologyApp:
                 'success': False,
                 'message': 'Invalid data format. Expected array of objects.'
             }
-        
+
         if len(data) == 0:
             return {
                 'success': False,
@@ -335,9 +290,7 @@ class TopologyApp:
             }
 
         logger.debug("Starting database bulk import operation")
-        
 
-        
         enriched = []
         for r in data:
             if isinstance(r, dict):
@@ -348,7 +301,7 @@ class TopologyApp:
 
         try:
             result = self.db_utils.insert_dashboard_connections_bulk(enriched)
-            
+
             if result['status'] == 'Success':
                 logger.info(f"Bulk network topology records added successfully: {result['inserted_count']} records")
                 return {
@@ -364,7 +317,7 @@ class TopologyApp:
                     'success': False,
                     'message': result['error']
                 }
-                
+
         except Exception as e:
             logger.error(f"Bulk network topology records add error: {str(e)}")
             return {
@@ -373,10 +326,6 @@ class TopologyApp:
             }
 
     def update_network_topology_record(self, data):
-        """
-        Update an existing network topology record in the Dashboard table.
-        Used by the Excel table component for editing existing records.
-        """
         logger.debug("Starting network topology record update operation")
         updated_by, error = self._enforce_allowed('update_network_topology_record')
         if error:
@@ -389,26 +338,11 @@ class TopologyApp:
             }
 
         logger.debug(f"Updating record ID {data['record_id']}: A[{data['device_a_hostname']}/{data['device_a_interface']}] -> B[{data['device_b_hostname']}/{data.get('device_b_interface', 'N/A')}]")
-        
-        # Auto-assign blocks if missing
-        # if not data.get('device_a_block'):
-        #     data['device_a_block'] = self.topology_utils.determine_block(
-        #         data['device_a_hostname'], 
-        #         data['device_a_ip'], 
-        #         data.get('device_a_type', 'unknown')
-        #     )
-        # if not data.get('device_b_block'):
-        #     data['device_b_block'] = self.topology_utils.determine_block(
-        #         data['device_b_hostname'], 
-        #         data.get('device_b_ip', ''), 
-        #         data.get('device_b_type', 'unknown')
-        #     )
-
 
         data['updated_by'] = updated_by
 
         result = self.db_utils.update_dashboard_connection(data)
-        
+
         if result['status'] == 'Success':
             logger.info(f"Network topology record updated successfully: ID {data['record_id']}, {result['rows_updated']} rows updated")
             return {
@@ -426,13 +360,8 @@ class TopologyApp:
             }
 
     def delete_network_topology_record(self, data):
-        """
-        Delete a network topology record from the Dashboard table.
-        Used by the Excel table component for removing records.
-        """
         logger.debug("Starting network topology record delete operation")
-        
-        # Validate required fields
+
         validation_errors = self.topology_utils.validate_topology_delete_record(data)
         if validation_errors:
             return {
@@ -447,10 +376,9 @@ class TopologyApp:
             return error
 
         logger.debug(f"Deleting record ID {record_id}")
-        
-        # Delete record from database
+
         result = self.db_utils.delete_dashboard_connection(record_id, updated_by)
-        
+
         if result['status'] == 'Success':
             logger.info(f"Network topology record deleted successfully: ID {record_id}, {result['rows_deleted']} rows deleted")
             return {
@@ -467,20 +395,11 @@ class TopologyApp:
             }
 
     def get_network_topology_records(self, search=''):
-        """
-        Retrieve all network topology records from the Dashboard table with optional search.
-        Used by the Excel table component for displaying and searching records.
-        """
         logger.debug("Starting network topology records retrieval operation")
-        
-        try:
-            # _, error = self._enforce_allowed('get_network_topology_records')
-            # if error:
-            #     return error
 
-            # Get records from database with optional search
+        try:
             result = self.db_utils.get_dashboard_connections(search)
-            
+
             if result['status'] == 'Success':
                 logger.info(f"Network topology records retrieved successfully: {len(result['records'])} records returned, {result['total_count']} total in database")
                 return {
@@ -494,7 +413,7 @@ class TopologyApp:
                     'success': False,
                     'message': result['error']
                 }
-                
+
         except Exception as e:
             logger.error(f"Get network topology records error: {str(e)}")
             return {
@@ -503,14 +422,8 @@ class TopologyApp:
             }
 
     def update_device_type(self, data):
-        """
-        Update device type by IP and hostname.
-        Searches both Device A and Device B columns and updates the type
-        regardless of which side the device appears on.
-        """
         logger.debug("Starting device type update operation")
-        
-        # Validate required fields
+
         validation_errors = self.topology_utils.validate_device_type_update(data)
         if validation_errors:
             return {
@@ -520,17 +433,16 @@ class TopologyApp:
 
         device_ip = data['device_ip']
         device_hostname = data['device_hostname']
-        new_device_type = data['new_device_type'].lower()  # Convert to lowercase
+        new_device_type = data['new_device_type'].lower()
 
         updated_by, error = self._enforce_allowed('update_device_type')
         if error:
             return error
 
         logger.debug(f"Updating device type: {device_hostname} ({device_ip}) to {new_device_type}")
-        
-        # Update device type in database
+
         result = self.db_utils.update_device_type(device_ip, device_hostname, new_device_type, updated_by)
-        
+
         if result['status'] == 'Success':
             logger.info(f"Device type updated successfully: {device_hostname} ({device_ip}) -> {new_device_type}, {result['rows_updated']} rows updated")
             return {
@@ -550,14 +462,8 @@ class TopologyApp:
             }
 
     def save_device_positions(self, positions):
-        """
-        Save device and block positions in bulk.
-        Accepts a map of positions keyed by nodeId. Node IDs that look like IPv4 addresses
-        are treated as device IPs and will update DEVICE_A_/DEVICE_B_ position columns.
-        Other node IDs are treated as block IDs and will update DEVICE_A_BLOCK_/DEVICE_B_BLOCK_ position columns.
-        """
         logger.debug(f"Starting bulk device and block position save operation at {datetime.now()}")
-        
+
         if not positions or not isinstance(positions, dict):
             return {
                 'success': False,
@@ -569,22 +475,21 @@ class TopologyApp:
         per_key_rows = {}
 
         logger.debug(f"Starting bulk position update for {len(positions)} items at {datetime.now()}")
-        
+
         try:
-            # Use the database layer for bulk position updates
             changed_by, error = self._enforce_allowed('save_device_positions')
             if error:
                 return error
-            
+
             logger.debug(f"bulk position Changed by: {changed_by} at {datetime.now()}")
 
             result = self.db_utils.save_device_positions_bulk(positions, changed_by)
-            
+
             if result['status'] == 'Success':
                 device_updates = result['device_rows_updated']
                 block_updates = result['block_rows_updated']
                 per_key_rows = result['per_key_rows']
-                
+
                 logger.info(f"Device positions saved successfully: {device_updates} device updates, {block_updates} block updates {datetime.now()}")
                 return {
                     'success': True,
@@ -603,7 +508,7 @@ class TopologyApp:
                     'success': False,
                     'message': result['error']
                 }
-                
+
         except Exception as e:
             logger.error(f"Bulk position save error: {str(e)}")
             return {
@@ -611,18 +516,9 @@ class TopologyApp:
                 'message': f'Failed to save positions: {str(e)}'
             }
 
-
-
-    
     def get_network_topology_blocks(self):
-        """
-        Get all network topology blocks from the database.
-        Used by the Excel table component for displaying and searching blocks.
-        """
         logger.debug("Starting network topology blocks retrieval operation")
         updated_by, error = self._enforce_allowed('get_network_topology_blocks')
-        # if error:
-        #     return error
         try:
             result = self.db_utils.get_network_topology_blocks()
             if result['status'] == 'Success':
@@ -645,14 +541,8 @@ class TopologyApp:
             }
 
     def add_network_topology_block(self, data):
-        """
-        Add a network topology block to the database.
-        Used by the Excel table component for adding new blocks.
-        """
         logger.debug("Starting network topology block add operation")
         created_by, error = self._enforce_allowed('add_network_topology_block')
-        # if error:
-        #     return error
         logger.debug(f"Inserting block: {data['block_name']}")
         created_by_user = created_by or 'system'
         updated_by_user = created_by or 'system'
@@ -673,14 +563,8 @@ class TopologyApp:
             }
 
     def update_network_topology_block(self, data):
-        """
-        Update a network topology block in the database.
-        Used by the Excel table component for updating existing blocks.
-        """
         logger.debug("Starting network topology block update operation")
         updated_by, error = self._enforce_allowed('update_network_topology_block')
-        # if error:
-        #     return error
         data['updated_by'] = updated_by or 'user'
         result = self.db_utils.update_network_topology_block(data)
         if result['status'] == 'Success':
@@ -699,16 +583,10 @@ class TopologyApp:
                 'success': False,
                 'message': result['error']
             }
-        
+
     def delete_network_topology_block(self, data):
-        """
-        Delete a network topology block from the database.
-        Used by the Excel table component for deleting existing blocks.
-        """
         logger.debug("Starting network topology block delete operation")
         updated_by, error = self._enforce_allowed('delete_network_topology_block')
-        # if error:
-        #     return error
         data['updated_by'] = updated_by or 'user'
         result = self.db_utils.delete_network_topology_block(data)
         if result['status'] == 'Success':
@@ -729,14 +607,8 @@ class TopologyApp:
 
 
     def delete_all_topology_table_records(self):
-        """
-        Delete all records from all topology tables.
-        Used by the Excel table component for deleting all records.
-        """
         logger.debug("Starting all topology table records delete operation")
         updated_by, error = self._enforce_allowed('delete_all_topology_table_records')
-        # if error:
-        #     return error
         result = self.db_utils.delete_all_topology_table_records(updated_by)
         if result['status'] == 'Success':
             logger.info(f"All topology table records deleted successfully")
@@ -750,32 +622,24 @@ class TopologyApp:
                 'success': False,
                 'message': result['error']
             }
-        
+
     def add_network_topology_blocks_bulk(self, data):
-        """
-        Add multiple network topology blocks to the database.
-        Used by the Excel table component for adding new blocks.
-        """
         logger.debug("Starting network topology block bulk add operation")
         created_by, error = self._enforce_allowed('add_network_topology_blocks_bulk')
-        # if error:
-        #     return error
-        
-        # Extract block names and created_by from the request data
+
         block_names = data.get('block_names', [])
         created_by = data.get('created_by', created_by)
-        
+
         if not block_names:
             return {
                 'success': False,
                 'message': 'No block names provided'
             }
-        
-        # Transform block names into the format expected by the database method
+
         blocks_data = [{'block_name': name} for name in block_names]
-        
+
         result = self.db_utils.insert_network_topology_blocks_bulk(blocks_data, created_by)
-        
+
         if result['status'] == 'Success':
             logger.info(f"Network topology block bulk added successfully: {result['created_count']} created, {result['skipped_count']} skipped")
             return {
@@ -797,14 +661,8 @@ class TopologyApp:
 
 
     def delete_network_topology_bulk(self, data):
-        """
-        Delete multiple network topology records from the database.
-        Used by the Excel table component for deleting multiple records.
-        """
         logger.debug("Starting network topology bulk delete operation")
         updated_by, error = self._enforce_allowed('delete_network_topology_bulk')
-        # if error:
-        #     return error
         result = self.db_utils.delete_network_topology_bulk(data['hostname'], data['ip'], updated_by)
         if result['status'] == 'Success':
             logger.info(f"Network topology bulk deleted successfully: {result['deleted_count']} deleted")
@@ -822,19 +680,13 @@ class TopologyApp:
             }
 
     def delete_network_topology_bulk_by_ids(self, data):
-        """
-        Delete multiple network topology records by their IDs.
-        Used by the Excel table component for deleting multiple selected records.
-        """
         logger.debug("Starting network topology bulk delete by IDs operation")
         record_ids = data.get('record_ids', [])
         if not record_ids or not isinstance(record_ids, list):
             return {'success': False, 'message': 'record_ids array is required'}
 
         updated_by, error = self._enforce_allowed('delete_network_topology_bulk_by_ids')
-        # if error:
-        #     return error
-        
+
         result = self.db_utils.delete_network_topology_bulk_by_ids(record_ids, updated_by)
         if result['status'] == 'Success':
             logger.info(f"Network topology bulk deleted by IDs successfully: {result['deleted_count']} deleted")
@@ -852,9 +704,6 @@ class TopologyApp:
             }
 
     def delete_network_topology_by_host_ip(self, data):
-        """
-        Delete all rows where the given (hostname, ip) pair appears on either device side.
-        """
         logger.debug("Starting delete by host/ip operation")
         hostname = (data or {}).get('hostname', '').strip()
         ip = (data or {}).get('ip', '').strip()
@@ -862,8 +711,6 @@ class TopologyApp:
             return {'success': False, 'message': 'hostname and ip are required'}
 
         updated_by, error = self._enforce_allowed('delete_network_topology_by_host_ip')
-        # if error:
-        #     return error
         result = self.db_utils.delete_network_topology_bulk(hostname, ip, updated_by)
         if result['status'] == 'Success':
             logger.info(f"Delete by host/ip success: {hostname} ({ip}) -> {result['rows_deleted']} rows")
@@ -880,11 +727,3 @@ class TopologyApp:
                 'success': False,
                 'message': result['error']
             }
-
-# if __name__ == "__main__":
-#     topology = TopologyApp()
-#     result=topology.get_network_topology_dashboard()
-#     print(result)
-#     import json
-#     # json.dump(result,open('cmic.json','w'),indent=2, default=str)
-#     json.dump(result,open('topology.json','w'),indent=2, default=str)
