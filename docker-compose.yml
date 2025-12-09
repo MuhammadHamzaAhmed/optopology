@@ -44,11 +44,8 @@ services:
     networks:
       - arbNetwork
     volumes:
-      # Mount source for local development (hot reload)
       - ./optopology/src:/usr/src/app:Z
-      # Persist logs
       - ./optopology/logs:/usr/src/applogs:Z
-      # Persist spooler tasks across restarts
       - optopology_spooler:/usr/src/app/spooler
     healthcheck:
       test: ["CMD-SHELL", "python -c 'import urllib.request,sys; sys.exit(0) if urllib.request.urlopen(\"http://127.0.0.1:5017/topology-api/health-check\", timeout=2).getcode()==200 else sys.exit(1)'" ]
