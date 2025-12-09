@@ -15,8 +15,7 @@ services:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
     networks:
-      arbNetwork:
-        ipv4_address: 192.168.10.19
+      - arbNetwork
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -41,10 +40,9 @@ services:
       - MONGO_DB=optopology
     privileged: true
     ports:
-      - "0.0.0.0:5017:5017"
+      - "5017:5017"
     networks:
-      arbNetwork:
-        ipv4_address: 192.168.10.10
+      - arbNetwork
     volumes:
       - ./optopology/src:/usr/src/app:Z
       - ./optopology/logs:/usr/src/applogs:Z
@@ -72,13 +70,9 @@ services:
     volumes:
       - ./Frontend/src:/app/src:Z
 
-
 networks:
   arbNetwork:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 192.168.10.0/24
 
 volumes:
   mongodb_data:
