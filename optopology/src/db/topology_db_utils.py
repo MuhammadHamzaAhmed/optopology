@@ -199,6 +199,17 @@ class TopologyDBUtils:
             # Insert new record
             print("DEBUG: No duplicate found -> Inserting new record")
             current_time = datetime.now()
+
+            # Get position values from record (may be set by auto-layout)
+            device_a_pos_x = record.get('device_a_position_x')
+            device_a_pos_y = record.get('device_a_position_y')
+            device_b_pos_x = record.get('device_b_position_x')
+            device_b_pos_y = record.get('device_b_position_y')
+            device_a_block_pos_x = record.get('device_a_block_position_x')
+            device_a_block_pos_y = record.get('device_a_block_position_y')
+            device_b_block_pos_x = record.get('device_b_block_position_x')
+            device_b_block_pos_y = record.get('device_b_block_position_y')
+
             document = {
                 "device_a_ip": da_ip,
                 "device_a_hostname": da_host,
@@ -206,20 +217,20 @@ class TopologyDBUtils:
                 "device_a_type": da_type,
                 "device_a_vendor": da_vendor,
                 "device_a_block": record.get('device_a_block', ''),
-                "device_a_position_x": None,
-                "device_a_position_y": None,
-                "device_a_block_position_x": None,
-                "device_a_block_position_y": None,
+                "device_a_position_x": device_a_pos_x,
+                "device_a_position_y": device_a_pos_y,
+                "device_a_block_position_x": device_a_block_pos_x,
+                "device_a_block_position_y": device_a_block_pos_y,
                 "device_b_ip": db_ip,
                 "device_b_hostname": db_host,
                 "device_b_interface": db_intf,
                 "device_b_type": db_type,
                 "device_b_vendor": db_vendor,
                 "device_b_block": record.get('device_b_block', ''),
-                "device_b_position_x": None,
-                "device_b_position_y": None,
-                "device_b_block_position_x": None,
-                "device_b_block_position_y": None,
+                "device_b_position_x": device_b_pos_x,
+                "device_b_position_y": device_b_pos_y,
+                "device_b_block_position_x": device_b_block_pos_x,
+                "device_b_block_position_y": device_b_block_pos_y,
                 "comments": comments,
                 "updated_by": record['updated_by'],
                 "created_by": record['created_by'],

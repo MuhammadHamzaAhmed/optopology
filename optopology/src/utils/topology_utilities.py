@@ -1083,5 +1083,149 @@ class TopologyUtilities:
         else:
             return 'good'
 
+    def calculate_auto_layout_positions(self, records):
+        """
+        Calculate initial positions for devices based on their block assignments.
+        Uses a grid layout within each block to prevent overlapping.
+
+        Args:
+            records: List of record dictionaries with device_a_block, device_b_block,
+                    device_a_ip, device_a_hostname, device_b_ip, device_b_hostname
+
+        Returns:
+            dict: Mapping of device_id -> {'x': float, 'y': float}
+        """
+        # Configuration for grid layout
+        DEVICES_PER_ROW = 4          # Number of devices per row in a block
+        DEVICE_SPACING_X = 200       # Horizontal spacing between devices
+        DEVICE_SPACING_Y = 150       # Vertical spacing between rows
+        BLOCK_SPACING = 1500         # Spacing between blocks
+        BLOCKS_PER_ROW = 3           # Number of blocks per row
+
+        # Collect unique devices per block
+        block_devices = {}  # block_name -> set of device_ids
+        device_info = {}    # device_id -> {'hostname': str, 'ip': str}
+        blockless_devices = set()
+
+        for record in records:
+            # Process Device A
+            device_a_id = self.compute_device_id(
+                record.get('device_a_ip', ''),
+                record.get('device_a_hostname', '')
+            )
+            device_a_block = (record.get('device_a_block') or '').strip()
+
+            if device_a_id:
+                device_info[device_a_id] = {
+                    'hostname': record.get('device_a_hostname', ''),
+                    'ip': record.get('device_a_ip', '')
+                }
+                if device_a_block:
+                    if device_a_block not in block_devices:
+                        block_devices[device_a_block] = set()
+                    block_devices[device_a_block].add(device_a_id)
+                else:
+                    blockless_devices.add(device_a_id)
+
+            # Process Device B
+            device_b_id = self.compute_device_id(
+                record.get('device_b_ip', ''),
+                record.get('device_b_hostname', '')
+            )
+            device_b_block = (record.get('device_b_block') or '').strip()
+
+            if device_b_id:
+                device_info[device_b_id] = {
+                    'hostname': record.get('device_b_hostname', ''),
+                    'ip': record.get('device_b_ip', '')
+                }
+                if device_b_block:
+                    if device_b_block not in block_devices:
+                        block_devices[device_b_block] = set()
+                    block_devices[device_b_block].add(device_b_id)
+                else:
+                    blockless_devices.add(device_b_id)
+
+        positions = {}
+        block_positions = {}
+
+        # Calculate block positions (arrange blocks in a grid)
+        block_names = sorted(block_devices.keys())
+        for block_idx, block_name in enumerate(block_names):
+            block_row = block_idx // BLOCKS_PER_ROW
+            block_col = block_idx % BLOCKS_PER_ROW
+
+            # Calculate block center position
+            block_center_x = block_col * BLOCK_SPACING
+            block_center_y = block_row * BLOCK_SPACING
+
+            block_positions[block_name] = {
+                'x': block_center_x,
+                'y': block_center_y
+            }
+
+            # Calculate device positions within this block
+            devices = sorted(list(block_devices[block_name]))
+            num_devices = len(devices)
+
+            # Calculate grid dimensions for devices in this block
+            num_rows = math.ceil(num_devices / DEVICES_PER_ROW)
+
+            for device_idx, device_id in enumerate(devices):
+                device_row = device_idx // DEVICES_PER_ROW
+                device_col = device_idx % DEVICES_PER_ROW
+
+                # Calculate how many devices are in this row
+                if device_row == num_rows - 1:
+                    # Last row might have fewer devices
+                    devices_in_row = num_devices - (device_row * DEVICES_PER_ROW)
+                else:
+                    devices_in_row = DEVICES_PER_ROW
+
+                # Center the row
+                row_width = (devices_in_row - 1) * DEVICE_SPACING_X
+                row_start_x = block_center_x - (row_width / 2)
+
+                # Center vertically
+                grid_height = (num_rows - 1) * DEVICE_SPACING_Y
+                grid_start_y = block_center_y - (grid_height / 2)
+
+                device_x = row_start_x + (device_col * DEVICE_SPACING_X)
+                device_y = grid_start_y + (device_row * DEVICE_SPACING_Y)
+
+                positions[device_id] = {
+                    'x': device_x,
+                    'y': device_y
+                }
+
+        # Position blockless devices in a circle around the main layout
+        if blockless_devices:
+            # Calculate center of all blocks
+            if block_positions:
+                center_x = sum(bp['x'] for bp in block_positions.values()) / len(block_positions)
+                center_y = sum(bp['y'] for bp in block_positions.values()) / len(block_positions)
+            else:
+                center_x = 0
+                center_y = 0
+
+            # Position blockless devices in concentric circles
+            blockless_list = sorted(list(blockless_devices))
+            radius = max(BLOCK_SPACING, 800)  # Start radius outside the block area
+
+            for idx, device_id in enumerate(blockless_list):
+                angle = (idx * 45) % 360  # 45-degree increments
+                ring = idx // 8  # 8 devices per ring
+                current_radius = radius + (ring * 200)
+
+                x = center_x + current_radius * math.cos(math.radians(angle))
+                y = center_y + current_radius * math.sin(math.radians(angle))
+
+                positions[device_id] = {'x': x, 'y': y}
+
+        return {
+            'device_positions': positions,
+            'block_positions': block_positions
+        }
+
 
 
