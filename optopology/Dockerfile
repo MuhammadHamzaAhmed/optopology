@@ -7,8 +7,7 @@ ENV TZ=Asia/Riyadh
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
-    libpcre3 \
-    libpcre3-dev \
+    libpcre2-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
