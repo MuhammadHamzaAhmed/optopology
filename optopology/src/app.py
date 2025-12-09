@@ -29,15 +29,28 @@ api_service_name = "topology-api"
 # print('testing-------------------555555555555555555555----------------------',file=sys.stderr)
 
 
+log_format = "[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s"
+log_datefmt = '%Y-%m-%dT%H:%M:%S'
+
+# File handler with proper size (10MB) and backup count
+file_handler = RotatingFileHandler('/usr/src/applogs/app_log.log', maxBytes=10000000, backupCount=5)
+file_handler.setFormatter(logging.Formatter(log_format, datefmt=log_datefmt))
+
+# Stream handler for Docker logs (stdout/stderr)
+stream_handler = logging.StreamHandler(sys.stderr)
+stream_handler.setFormatter(logging.Formatter(log_format, datefmt=log_datefmt))
+
 logging.basicConfig(
-    handlers=[RotatingFileHandler('/usr/src/applogs/app_log.log', maxBytes=10)],
+    handlers=[file_handler, stream_handler],
     level=logging.INFO,
-    format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-    datefmt='%Y-%m-%dT%H:%M:%S')
+    format=log_format,
+    datefmt=log_datefmt)
 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 if not 'uploads' in os.listdir():
     os.mkdir('uploads')
+
+logging.info("Flask application initialized successfully")
 
 @app.route('/' + api_service_name + '/health-check', methods=['GET'])
 def health_check():
@@ -838,10 +851,16 @@ def delete_network_topology_by_host_ip():
 
 @app.route('/' + api_service_name + '/permission-check', methods=['GET'])
 def permission_check():
-    # Handled by Flask-CORS, but define explicitly to guarantee 204 for preflight
-    service = TopologyApp()
-    response = service.permission_check()
-    return jsonify(response), 200
+    logging.info("Permission check endpoint called")
+    try:
+        service = TopologyApp()
+        response = service.permission_check()
+        logging.info(f"Permission check response: {response}")
+        return jsonify(response), 200
+    except Exception as e:
+        logging.error(f"Permission check error: {str(e)}")
+        logging.error(traceback.format_exc())
+        return jsonify({'error': str(e), 'success': False}), 500
 
 
 # application = app
