@@ -15,7 +15,13 @@ class TopologyDBUtils:
         print(f"Connecting to MongoDB at {mongo_host}:{mongo_port}", file=sys.stderr)
         try:
             connection_string = f"mongodb://{mongo_user}:{mongo_password}@{mongo_host}:{mongo_port}/?authSource=admin"
-            self.client = MongoClient(connection_string)
+            # Add connection timeout (5 seconds) and server selection timeout (5 seconds)
+            self.client = MongoClient(
+                connection_string,
+                serverSelectionTimeoutMS=5000,
+                connectTimeoutMS=5000,
+                socketTimeoutMS=10000
+            )
             self.db = self.client[mongo_db]
             self.dashboard_collection = self.db[topology_dashboard_collection]
             self.block_collection = self.db[topology_block_collection]
