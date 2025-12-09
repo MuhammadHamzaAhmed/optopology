@@ -56,7 +56,7 @@ class TopologyApp:
     def import_excel_headered(self, data):
         """
         Process Excel header-based data and insert into Dashboard table.
-        Handles flexible header naming and deduplication logic.
+        Handles flexible header naming, deduplication logic, and auto-layout positioning.
         """
         inserted_count = 0
         skipped = []
@@ -69,6 +69,8 @@ class TopologyApp:
         if error:
             return error
 
+        # Phase 1: Extract and validate all records first
+        valid_records = []
         for idx, raw_row in enumerate(data, start=1):
             try:
                 if not isinstance(raw_row, dict):
@@ -80,6 +82,8 @@ class TopologyApp:
                 record = self.topology_utils.extract_headered_record(raw_row)
                 record['created_by'] = created_by
                 record['updated_by'] = created_by
+                record['_original_index'] = idx  # Track original row index
+
                 # Validate required fields
                 validation_errors = self.topology_utils.validate_headered_record(record, idx)
                 if validation_errors:
@@ -98,18 +102,72 @@ class TopologyApp:
                 # Auto-assign blocks if missing
                 if not record.get('device_a_block'):
                     record['device_a_block'] = self.topology_utils.determine_block(
-                        record['device_a_hostname'], 
-                        record['device_a_ip'], 
+                        record['device_a_hostname'],
+                        record['device_a_ip'],
                         record['device_a_type'],
                     )
                 if not record.get('device_b_block'):
                     record['device_b_block'] = self.topology_utils.determine_block(
-                        record['device_b_hostname'], 
-                        record['device_b_ip'], 
+                        record['device_b_hostname'],
+                        record['device_b_ip'],
                         record['device_b_type']
                     )
 
-                # Insert record
+                valid_records.append(record)
+
+            except Exception as row_err:
+                msg = f"Row {idx} failed with error: {str(row_err)}"
+                errors.append(msg)
+                logger.error(msg)
+
+        # Phase 2: Calculate auto-layout positions for all valid records
+        if valid_records:
+            logger.info(f"Calculating auto-layout positions for {len(valid_records)} records")
+            layout_result = self.topology_utils.calculate_auto_layout_positions(valid_records)
+            device_positions = layout_result['device_positions']
+            block_positions = layout_result['block_positions']
+
+            # Apply calculated positions to records
+            for record in valid_records:
+                device_a_id = self.topology_utils.compute_device_id(
+                    record.get('device_a_ip', ''),
+                    record.get('device_a_hostname', '')
+                )
+                device_b_id = self.topology_utils.compute_device_id(
+                    record.get('device_b_ip', ''),
+                    record.get('device_b_hostname', '')
+                )
+
+                # Set device A position
+                if device_a_id and device_a_id in device_positions:
+                    pos = device_positions[device_a_id]
+                    record['device_a_position_x'] = pos['x']
+                    record['device_a_position_y'] = pos['y']
+
+                # Set device B position
+                if device_b_id and device_b_id in device_positions:
+                    pos = device_positions[device_b_id]
+                    record['device_b_position_x'] = pos['x']
+                    record['device_b_position_y'] = pos['y']
+
+                # Set block positions
+                device_a_block = (record.get('device_a_block') or '').strip()
+                device_b_block = (record.get('device_b_block') or '').strip()
+
+                if device_a_block and device_a_block in block_positions:
+                    block_pos = block_positions[device_a_block]
+                    record['device_a_block_position_x'] = block_pos['x']
+                    record['device_a_block_position_y'] = block_pos['y']
+
+                if device_b_block and device_b_block in block_positions:
+                    block_pos = block_positions[device_b_block]
+                    record['device_b_block_position_x'] = block_pos['x']
+                    record['device_b_block_position_y'] = block_pos['y']
+
+        # Phase 3: Insert all records with calculated positions
+        for record in valid_records:
+            idx = record.pop('_original_index', 0)
+            try:
                 result = self.db_utils.insert_dashboard_connection(record)
                 if result['status'] == 'Success':
                     inserted_count += 1
@@ -117,7 +175,7 @@ class TopologyApp:
                         inserted_ids.append(result['record_id'])
                     logger.debug(f"Successfully inserted headered record {idx}")
                 else:
-                    errors.append(f"Row {idx}: {result['error']}")
+                    errors.append(f"Row {idx}: {result.get('error', 'Unknown error')}")
 
             except Exception as row_err:
                 msg = f"Row {idx} failed with error: {str(row_err)}"
